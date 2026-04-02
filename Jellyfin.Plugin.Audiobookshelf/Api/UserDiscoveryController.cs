@@ -35,52 +35,26 @@ public class UserDiscoveryController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the current keyring status.
-    /// </summary>
-    /// <returns>Keyring status including availability and fallback settings.</returns>
-    [HttpGet("KeyringStatus")]
-    public ActionResult<KeyringStatusResponse> GetKeyringStatus()
-    {
-        return Ok(new KeyringStatusResponse
-        {
-            IsKeyringAvailable = _tokenVault.IsKeyringAvailable,
-            RequiresUserConfirmation = _tokenVault.RequiresUserConfirmation,
-            UsePluginConfigFallback = _tokenVault.HasUserApprovedFallback
-        });
-    }
-
-    /// <summary>
-    /// Approves fallback storage when keyring is unavailable.
-    /// </summary>
-    [HttpPost("ApproveFallback")]
-    public ActionResult ApproveFallbackStorage()
-    {
-        _tokenVault.HasUserApprovedFallback = true;
-        _logger.LogInformation("User approved fallback token storage in plugin config");
-        return Ok();
-    }
-
-    /// <summary>
     /// Discovers and matches users between Jellyfin and Audiobookshelf.
+    /// The ABS admin token is read from the <c>X-Abs-Token</c> request header to
+    /// avoid logging it in Jellyfin's access log.
     /// </summary>
-    /// <param name="adminToken">Admin API token for ABS.</param>
-    /// <param name="serverUrl">ABS server URL.</param>
+    /// <param name="serverUrl">ABS server URL (query string).</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>List of user matches with keyring status.</returns>
+    /// <returns>List of user matches.</returns>
     [HttpGet("Discover")]
     public async Task<ActionResult<UserDiscoveryResponse>> DiscoverUsers(
-        [FromQuery] string adminToken,
         [FromQuery] string serverUrl,
         CancellationToken ct = default)
     {
-        var matches = await _mappingService.DiscoverUsersAsync(adminToken, serverUrl, ct);
-
-        return Ok(new UserDiscoveryResponse
+        var adminToken = Request.Headers["X-Abs-Token"].ToString();
+        if (string.IsNullOrWhiteSpace(adminToken))
         {
-            Matches = ConvertToDto(matches),
-            IsKeyringAvailable = _tokenVault.IsKeyringAvailable,
-            RequiresUserConfirmation = _tokenVault.RequiresUserConfirmation
-        });
+            return BadRequest("X-Abs-Token header is required");
+        }
+
+        var matches = await _mappingService.DiscoverUsersAsync(adminToken, serverUrl, ct);
+        return Ok(new UserDiscoveryResponse { Matches = ConvertToDto(matches) });
     }
 
     /// <summary>
@@ -178,16 +152,6 @@ public class UserDiscoveryResponse
     /// Gets or sets the list of user matches.
     /// </summary>
     public List<UserMatchDto> Matches { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the system keyring is available.
-    /// </summary>
-    public bool IsKeyringAvailable { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether user confirmation is required for fallback storage.
-    /// </summary>
-    public bool RequiresUserConfirmation { get; set; }
 }
 
 /// <summary>
@@ -248,23 +212,3 @@ public class SaveMappingsResponse
     public int SavedCount { get; set; }
 }
 
-/// <summary>
-/// Response containing keyring status information.
-/// </summary>
-public class KeyringStatusResponse
-{
-    /// <summary>
-    /// Gets or sets a value indicating whether the system keyring is available.
-    /// </summary>
-    public bool IsKeyringAvailable { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether user confirmation is required for fallback storage.
-    /// </summary>
-    public bool RequiresUserConfirmation { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether plugin config fallback is enabled.
-    /// </summary>
-    public bool UsePluginConfigFallback { get; set; }
-}

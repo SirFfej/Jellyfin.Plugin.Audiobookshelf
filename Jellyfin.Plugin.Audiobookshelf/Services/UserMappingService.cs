@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Api.Models;
+using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.Logging;
@@ -174,6 +175,9 @@ public class UserMappingService
         }
     }
 
+    // Minimum fuzzy score to suggest a match (but not auto-select it)
+    private const double FuzzyThreshold = 0.6;
+
     private List<UserMatch> MatchUsers(List<JellyfinUserInfo> jellyfinUsers, List<AbsUser> absUsers)
     {
         var matches = new List<UserMatch>();
@@ -183,6 +187,7 @@ public class UserMappingService
         {
             var match = new UserMatch { JellyfinUser = jfUser };
 
+            // 1. Exact match (case-insensitive)
             var exactMatch = absUsers.FirstOrDefault(u =>
                 string.Equals(u.Username, jfUser.Username, StringComparison.OrdinalIgnoreCase));
 
@@ -195,12 +200,37 @@ public class UserMappingService
             }
             else
             {
-                match.MatchType = UserMatchType.None;
+                // 2. Fuzzy match — best scoring unmatched ABS user above threshold
+                AbsUser? bestFuzzy = null;
+                double bestScore = FuzzyThreshold;
+
+                foreach (var absUser in absUsers.Where(u => !matchedAbsUsers.Contains(u.Id)))
+                {
+                    double score = ItemMatcher.FuzzyScorePublic(jfUser.Username, absUser.Username ?? string.Empty);
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestFuzzy = absUser;
+                    }
+                }
+
+                if (bestFuzzy != null)
+                {
+                    match.AbsUser = bestFuzzy;
+                    match.MatchType = UserMatchType.Fuzzy;
+                    match.IsSelected = false; // requires manual confirmation
+                    matchedAbsUsers.Add(bestFuzzy.Id);
+                }
+                else
+                {
+                    match.MatchType = UserMatchType.None;
+                }
             }
 
             matches.Add(match);
         }
 
+        // Unmatched ABS users — surface them so the admin can manually pair them
         foreach (var absUser in absUsers.Where(u => !matchedAbsUsers.Contains(u.Id)))
         {
             matches.Add(new UserMatch
