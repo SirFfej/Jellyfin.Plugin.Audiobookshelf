@@ -261,6 +261,17 @@ public class AbsApiClient
     public string Token => _token;
 
     // -------------------------------------------------------------------------
+    // User management (admin only)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns all users from the ABS server (admin only).
+    /// Each user includes their API token.
+    /// </summary>
+    public async Task<AbsAllUsersResponse?> GetAllUsersAsync(CancellationToken ct = default)
+        => await GetAsync<AbsAllUsersResponse>("api/users", ct).ConfigureAwait(false);
+
+    // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
 
@@ -307,4 +318,14 @@ public class AbsOpenSessionsResponse
     /// <summary>Gets or sets the open sessions.</summary>
     [JsonPropertyName("sessions")]
     public AbsPlaybackSession[] Sessions { get; set; } = [];
+}
+
+/// <summary>
+/// Wrapper for all users response from <c>GET /api/users</c>.
+/// </summary>
+public class AbsAllUsersResponse
+{
+    /// <summary>Gets or sets the list of all users.</summary>
+    [JsonPropertyName("users")]
+    public AbsUser[] Users { get; set; } = [];
 }

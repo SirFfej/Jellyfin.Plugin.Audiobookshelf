@@ -68,4 +68,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Returns the server URL with no trailing slash, safe for URL construction.
     /// </summary>
     public string NormalizedServerUrl => AbsServerUrl.TrimEnd('/');
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to store tokens in plugin config
+    /// when the system keyring is unavailable.
+    /// User must explicitly approve this after being warned about reduced security.
+    /// </summary>
+    public bool UsePluginConfigFallback { get; set; } = false;
 }

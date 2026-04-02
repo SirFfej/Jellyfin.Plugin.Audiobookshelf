@@ -1,5 +1,6 @@
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Logging;
+using Jellyfin.Plugin.Audiobookshelf.Services;
 using Jellyfin.Plugin.Audiobookshelf.Sync;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
@@ -39,5 +40,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 
         serviceCollection.AddSingleton<AbsApiClientFactory>();
         serviceCollection.AddSingleton<ProgressSyncService>();
+        serviceCollection.AddSingleton<TokenVault>();
+        serviceCollection.AddSingleton<UserMappingService>();
     }
 }

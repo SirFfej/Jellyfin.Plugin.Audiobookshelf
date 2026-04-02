@@ -23,4 +23,8 @@ public class AbsUser
     /// <summary>Gets or sets a value indicating whether the account is active.</summary>
     [JsonPropertyName("isActive")]
     public bool IsActive { get; set; }
+
+    /// <summary>Gets or sets the user's API token (admin only).</summary>
+    [JsonPropertyName("token")]
+    public string? Token { get; set; }
 }
