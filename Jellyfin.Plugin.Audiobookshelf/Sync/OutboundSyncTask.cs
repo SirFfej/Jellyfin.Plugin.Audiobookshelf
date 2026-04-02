@@ -15,26 +15,27 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.Audiobookshelf.Sync;
 
 /// <summary>
-/// Scheduled task that pulls ABS listening progress into Jellyfin for all mapped users.
-/// Uses "last-write-wins" based on the ABS <c>lastUpdate</c> timestamp.
+/// Scheduled task that pushes Jellyfin playback progress to Audiobookshelf for all mapped users.
+/// Complements <see cref="ProgressSyncService"/>, which handles real-time per-event pushes.
+/// This task is useful for bulk re-sync after ABS was unreachable, or as a periodic backstop.
 /// </summary>
-public partial class InboundSyncTask : IScheduledTask
+public partial class OutboundSyncTask : IScheduledTask
 {
     private readonly AbsApiClientFactory _clientFactory;
     private readonly IUserDataManager _userDataManager;
     private readonly IUserManager _userManager;
     private readonly ILibraryManager _libraryManager;
-    private readonly ILogger<InboundSyncTask> _logger;
+    private readonly ILogger<OutboundSyncTask> _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InboundSyncTask"/> class.
+    /// Initializes a new instance of the <see cref="OutboundSyncTask"/> class.
     /// </summary>
-    public InboundSyncTask(
+    public OutboundSyncTask(
         AbsApiClientFactory clientFactory,
         IUserDataManager userDataManager,
         IUserManager userManager,
         ILibraryManager libraryManager,
-        ILogger<InboundSyncTask> logger)
+        ILogger<OutboundSyncTask> logger)
     {
         _clientFactory = clientFactory;
         _userDataManager = userDataManager;
@@ -44,13 +45,13 @@ public partial class InboundSyncTask : IScheduledTask
     }
 
     /// <inheritdoc />
-    public string Name => "Audiobookshelf: Pull Progress from ABS";
+    public string Name => "Audiobookshelf: Push Progress to ABS";
 
     /// <inheritdoc />
-    public string Key => "AbsInboundProgressSync";
+    public string Key => "AbsOutboundProgressSync";
 
     /// <inheritdoc />
-    public string Description => "Pulls listening progress from Audiobookshelf for all mapped users.";
+    public string Description => "Pushes current Jellyfin playback positions to Audiobookshelf for all mapped users.";
 
     /// <inheritdoc />
     public string Category => "Audiobookshelf";
@@ -59,9 +60,9 @@ public partial class InboundSyncTask : IScheduledTask
     public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
         var config = Plugin.Instance?.Configuration;
-        if (config?.EnableInboundSync != true)
+        if (config?.EnableOutboundSync != true)
         {
-            _logger.LogDebug("ABS inbound sync is disabled — skipping");
+            _logger.LogDebug("ABS outbound sync is disabled — skipping");
             progress.Report(100);
             return;
         }
@@ -91,7 +92,7 @@ public partial class InboundSyncTask : IScheduledTask
 
         if (userTokenPairs.Count == 0)
         {
-            _logger.LogInformation("ABS inbound sync: no user tokens configured");
+            _logger.LogInformation("ABS outbound sync: no user tokens configured");
             progress.Report(100);
             return;
         }
@@ -130,30 +131,18 @@ public partial class InboundSyncTask : IScheduledTask
         int failed = results.Count(r => !r.Success);
         if (failed > 0)
         {
-            _logger.LogWarning("ABS inbound sync completed with {FailedCount} user(s) failed", failed);
+            _logger.LogWarning("ABS outbound sync completed with {FailedCount} user(s) failed", failed);
         }
 
         progress.Report(100);
     }
 
     /// <inheritdoc />
-    public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
-    {
-        int intervalMinutes = Plugin.Instance?.Configuration.ProgressSyncIntervalMinutes ?? 10;
-
-        return
-        [
-            new TaskTriggerInfo
-            {
-                Type = TaskTriggerInfo.TriggerInterval,
-                IntervalTicks = TimeSpan.FromMinutes(intervalMinutes).Ticks
-            },
-            new TaskTriggerInfo
-            {
-                Type = TaskTriggerInfo.TriggerStartup
-            }
-        ];
-    }
+    /// <remarks>
+    /// No default triggers — the real-time <see cref="ProgressSyncService"/> handles day-to-day pushes.
+    /// This task is intended for on-demand use or as a manual backstop.
+    /// </remarks>
+    public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => [];
 
     // -------------------------------------------------------------------------
 
@@ -194,51 +183,48 @@ public partial class InboundSyncTask : IScheduledTask
                 continue;
             }
 
-            var absProgress = await absClient.GetProgressAsync(absItemId!, ct).ConfigureAwait(false);
-            if (absProgress is null)
+            var userData = _userDataManager.GetUserData(jellyfinUser, item);
+            if (userData is null)
             {
                 continue;
             }
 
-            var jellyfinUserData = _userDataManager.GetUserData(jellyfinUser, item);
-            if (jellyfinUserData is null)
+            // Skip items with no meaningful playback data
+            if (userData.PlaybackPositionTicks == 0 && !userData.Played)
             {
                 continue;
             }
 
-            DateTime absLastUpdate = TimeHelper.FromUnixMs(absProgress.LastUpdate);
+            double currentSecs = TimeHelper.TicksToSeconds(userData.PlaybackPositionTicks);
+            double duration = item.RunTimeTicks.HasValue
+                ? TimeHelper.TicksToSeconds(item.RunTimeTicks.Value)
+                : 0;
 
-            // Last-write-wins: only update Jellyfin if ABS is newer
-            if (jellyfinUserData.LastPlayedDate.HasValue
-                && jellyfinUserData.LastPlayedDate.Value >= absLastUpdate)
+            bool ok = await absClient.UpdateProgressAsync(
+                absItemId!,
+                currentSecs,
+                duration,
+                userData.Played,
+                ct).ConfigureAwait(false);
+
+            if (ok)
             {
-                continue;
+                LogProgressPushed(_logger, absItemId!, currentSecs);
             }
-
-            jellyfinUserData.PlaybackPositionTicks = TimeHelper.SecondsToTicks(absProgress.CurrentTime);
-            jellyfinUserData.Played = absProgress.IsFinished;
-            jellyfinUserData.LastPlayedDate = absProgress.IsFinished && absProgress.FinishedAt.HasValue
-                ? TimeHelper.FromUnixMs(absProgress.FinishedAt.Value)
-                : absLastUpdate;
-
-            _userDataManager.SaveUserData(jellyfinUser, item, jellyfinUserData,
-                UserDataSaveReason.Import, ct);
-
-            LogProgressUpdated(_logger, absItemId!, absProgress.CurrentTime);
         }
     }
 
     // ── Source-generated log methods ──────────────────────────────────────────
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping sync: invalid Jellyfin user ID '{UserId}'")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping outbound sync: invalid Jellyfin user ID '{UserId}'")]
     private static partial void LogInvalidUserId(ILogger logger, string userId);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Jellyfin user '{UserId}' not found — skipping ABS sync")]
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Jellyfin user '{UserId}' not found — skipping ABS outbound sync")]
     private static partial void LogUserNotFound(ILogger logger, string userId);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated Jellyfin progress for ABS item '{ItemId}' → {CurrentTime:F1}s")]
-    private static partial void LogProgressUpdated(ILogger logger, string itemId, double currentTime);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Pushed ABS progress for item '{ItemId}' → {CurrentTime:F1}s")]
+    private static partial void LogProgressPushed(ILogger logger, string itemId, double currentTime);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Inbound sync failed for user '{UserId}'")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbound sync failed for user '{UserId}'")]
     private static partial void LogSyncFailed(ILogger logger, Exception ex, string userId);
 }

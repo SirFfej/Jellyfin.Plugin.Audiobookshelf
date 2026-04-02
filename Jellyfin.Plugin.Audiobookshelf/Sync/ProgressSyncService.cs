@@ -69,14 +69,11 @@ public sealed partial class ProgressSyncService : IDisposable
             : 0;
 
         string debounceKey = $"{userId}:{absItemId}";
-        if (_pending.TryRemove(debounceKey, out var existingCts))
-        {
-            existingCts.Cancel();
-            existingCts.Dispose();
-        }
-
+        CancellationTokenSource? oldCts = null;
         var cts = new CancellationTokenSource();
-        _pending[debounceKey] = cts;
+        _pending.AddOrUpdate(debounceKey, cts, (_, existing) => { oldCts = existing; return cts; });
+        oldCts?.Cancel();
+        oldCts?.Dispose();
 
         _ = Task.Run(async () =>
         {

@@ -223,7 +223,12 @@ internal sealed class AbsFileLogger : ILogger
             sb.Append(exception);
         }
 
+        // Sanitize before writing — prevent log injection via ABS usernames or book titles
+        string logLine = sb.ToString()
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
+
         // Non-blocking — drops to background queue; never throws
-        _writer.TryWrite(sb.ToString());
+        _writer.TryWrite(logLine);
     }
 }

@@ -123,6 +123,9 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
 
             info.TryGetProviderId("Asin", out string? asin);
             info.TryGetProviderId("Isbn", out string? isbn);
+            // BookInfo does not expose author in Jellyfin 10.10 — pass null so ItemMatcher
+            // falls back to title-only scoring. Author matching can be added if a future
+            // Jellyfin version adds author to ItemLookupInfo.
             string? authorName = null;
 
             absItem = ItemMatcher.FindBestMatch(

@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Concurrent;
+using System.Linq;
+using System.Net.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using System.Net.Http;
 
 namespace Jellyfin.Plugin.Audiobookshelf.Api;
 
@@ -44,6 +46,23 @@ public class AbsApiClientFactory
     {
         var config = Plugin.Instance?.Configuration;
         string baseUrl = config?.NormalizedServerUrl ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException(
+                "Audiobookshelf server URL and API token must be configured before making API requests.");
+        }
+
+        // Invalidate cached clients if the server URL has changed
+        if (_clients.Count > 0)
+        {
+            string expectedPrefix = baseUrl + ":";
+            if (_clients.Keys.Any(k => !k.StartsWith(expectedPrefix, StringComparison.Ordinal)))
+            {
+                InvalidateAll();
+            }
+        }
+
         string cacheKey = $"{baseUrl}:{token}";
 
         return _clients.GetOrAdd(cacheKey, _ =>

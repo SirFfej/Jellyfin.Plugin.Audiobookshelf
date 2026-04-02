@@ -29,15 +29,8 @@
             font-size: 12px;
             color: var(--text-secondary, #666);
         }
-        .fallback-warning {
-            background-color: var(--warning-color-translucent, rgba(255,165,0,0.2));
-            border: 1px solid var(--warning-color, #ffa500);
-            border-radius: 4px;
-            padding: 12px;
-            margin: 12px 0;
-        }
         #userDiscoverySection {
-            display: none;
+            display: block;
         }
         .loading-spinner {
             display: inline-block;
@@ -172,15 +165,6 @@
                 </div>
 
                 <div id="userDiscoverySection">
-                    <div id="keyringWarning" class="fallback-warning" style="display: none;">
-                        <strong>System Keyring Unavailable</strong>
-                        <p>API tokens cannot be stored securely. Do you want to store them in the plugin configuration instead?</p>
-                        <p style="color: var(--warning-color, #ffa500);">Warning: Tokens will be stored in plain text in the plugin configuration file.</p>
-                        <button is="emby-button" type="button" id="approveFallback" class="raised emby-button">
-                            <span>Accept & Continue</span>
-                        </button>
-                    </div>
-
                     <div style="margin-bottom: 16px;">
                         <button is="emby-button" type="button" id="discoverUsers" class="raised emby-button">
                             <span>Discover Users</span>
@@ -217,8 +201,6 @@
     'use strict';
 
     const pageId = 'audiobookshelfConfigPage';
-    let keyringAvailable = true;
-    let requiresConfirmation = false;
     let userMatches = [];
 
     function loadConfig(page) {
@@ -252,59 +234,6 @@
         });
     }
 
-    function checkKeyringStatus(page) {
-        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/KeyringStatus'), {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            keyringAvailable = data.IsKeyringAvailable;
-            requiresConfirmation = data.RequiresUserConfirmation;
-
-            const section = page.querySelector('#userDiscoverySection');
-            const warning = page.querySelector('#keyringWarning');
-            const tokenSection = page.querySelector('#userTokenSection');
-
-            section.style.display = 'block';
-
-            if (!keyringAvailable && data.UsePluginConfigFallback) {
-                warning.style.display = 'none';
-                tokenSection.style.display = 'block';
-            } else if (!keyringAvailable) {
-                warning.style.display = 'block';
-                tokenSection.style.display = 'none';
-            } else {
-                warning.style.display = 'none';
-                tokenSection.style.display = 'block';
-            }
-        })
-        .catch(function (err) {
-            console.error('Failed to check keyring status:', err);
-            page.querySelector('#userDiscoverySection').style.display = 'block';
-        });
-    }
-
-    function approveFallback(page) {
-        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/ApproveFallback'), {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json'
-            }
-        })
-        .then(function (r) { return r.json(); })
-        .then(function () {
-            page.querySelector('#keyringWarning').style.display = 'none';
-            page.querySelector('#userTokenSection').style.display = 'block';
-            requiresConfirmation = false;
-        })
-        .catch(function (err) {
-            console.error('Failed to approve fallback:', err);
-        });
-    }
-
     function discoverUsers(page) {
         const url = page.querySelector('#absServerUrl').value;
         const token = page.querySelector('#absAdminToken').value;
@@ -319,17 +248,16 @@
         status.innerHTML = '<span class="loading-spinner"></span> Discovering users...';
         status.style.color = '';
 
-        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/Discover?adminToken=' + encodeURIComponent(token) + '&serverUrl=' + encodeURIComponent(url)), {
+        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/Discover?serverUrl=' + encodeURIComponent(url)), {
             method: 'GET',
             headers: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Abs-Token': token
             }
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
             userMatches = data.Matches;
-            keyringAvailable = data.IsKeyringAvailable;
-            requiresConfirmation = data.RequiresUserConfirmation;
             renderUserMatches(page, data.Matches);
             status.textContent = 'Found ' + data.Matches.length + ' user(s)';
             status.style.color = 'var(--success-color, green)';
@@ -521,7 +449,6 @@
         if (!page) return;
 
         loadConfig(page);
-        checkKeyringStatus(page);
 
         page.querySelector('#absTestConnection').addEventListener('click', function () {
             testConnection(page);
@@ -530,10 +457,6 @@
         page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
             ev.preventDefault();
             saveConfig(page);
-        });
-
-        page.querySelector('#approveFallback')?.addEventListener('click', function () {
-            approveFallback(page);
         });
 
         page.querySelector('#discoverUsers')?.addEventListener('click', function () {

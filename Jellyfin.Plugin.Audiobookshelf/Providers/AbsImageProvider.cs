@@ -21,14 +21,19 @@ namespace Jellyfin.Plugin.Audiobookshelf.Providers;
 public class AbsImageProvider : IRemoteImageProvider
 {
     private readonly AbsApiClientFactory _clientFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AbsImageProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AbsImageProvider"/> class.
     /// </summary>
-    public AbsImageProvider(AbsApiClientFactory clientFactory, ILogger<AbsImageProvider> logger)
+    public AbsImageProvider(
+        AbsApiClientFactory clientFactory,
+        IHttpClientFactory httpClientFactory,
+        ILogger<AbsImageProvider> logger)
     {
         _clientFactory = clientFactory;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -74,10 +79,10 @@ public class AbsImageProvider : IRemoteImageProvider
     }
 
     /// <inheritdoc />
-    public async Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
+    public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
     {
         // Cover images are public — no auth header required
-        using var httpClient = new HttpClient();
-        return await httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+        var httpClient = _httpClientFactory.CreateClient(AbsApiClient.HttpClientName);
+        return httpClient.GetAsync(url, cancellationToken);
     }
 }
