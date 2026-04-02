@@ -15,7 +15,7 @@ namespace Jellyfin.Plugin.Audiobookshelf.Sync;
 /// Subscribes to <see cref="IUserDataManager.UserDataSaved"/> and debounces
 /// updates per-item (10 s) to avoid hammering the ABS server.
 /// </summary>
-public sealed class ProgressSyncService : IDisposable
+public sealed partial class ProgressSyncService : IDisposable
 {
     private readonly AbsApiClientFactory _clientFactory;
     private readonly IUserDataManager _userDataManager;
@@ -39,7 +39,7 @@ public sealed class ProgressSyncService : IDisposable
         _logger = logger;
 
         _userDataManager.UserDataSaved += OnUserDataSaved;
-        _logger.LogInformation("ABS ProgressSyncService started");
+        LogStarted(_logger);
     }
 
     private void OnUserDataSaved(object? sender, UserDataSaveEventArgs e)
@@ -49,14 +49,12 @@ public sealed class ProgressSyncService : IDisposable
             return;
         }
 
-        // Only sync playback events
         if (e.SaveReason != UserDataSaveReason.PlaybackProgress
             && e.SaveReason != UserDataSaveReason.PlaybackFinished)
         {
             return;
         }
 
-        // Only items that have been matched/browsed via ABS
         if (!e.Item.TryGetProviderId("Audiobookshelf", out string? absItemId)
             || string.IsNullOrWhiteSpace(absItemId))
         {
@@ -66,11 +64,10 @@ public sealed class ProgressSyncService : IDisposable
         string userId = e.UserId.ToString("N");
         double currentSecs = TimeHelper.TicksToSeconds(e.UserData.PlaybackPositionTicks);
         bool isFinished = e.UserData.Played;
+        double duration = e.Item.RunTimeTicks.HasValue
+            ? TimeHelper.TicksToSeconds(e.Item.RunTimeTicks.Value)
+            : 0;
 
-        // Duration: try to read from provider IDs or fall back to 0 (ABS will ignore it)
-        double duration = 0;
-
-        // Debounce: cancel any existing pending update for this user+item pair
         string debounceKey = $"{userId}:{absItemId}";
         if (_pending.TryRemove(debounceKey, out var existingCts))
         {
@@ -94,16 +91,16 @@ public sealed class ProgressSyncService : IDisposable
 
                 if (!ok)
                 {
-                    _logger.LogWarning("ABS progress update failed for item {ItemId}, user {UserId}", absItemId, userId);
+                    LogProgressUpdateFailed(_logger, absItemId, userId);
                 }
             }
             catch (OperationCanceledException)
             {
-                // Debounced away — a newer update supersedes this one
+                // Debounced — a newer update supersedes this one
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Unexpected error syncing progress for item {ItemId}", absItemId);
+                LogProgressSyncError(_logger, ex, absItemId);
             }
         }, cts.Token);
     }
@@ -121,4 +118,15 @@ public sealed class ProgressSyncService : IDisposable
 
         _pending.Clear();
     }
+
+    // ── Source-generated log methods (zero allocation on hot path) ────────────
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Audiobookshelf progress sync service started")]
+    private static partial void LogStarted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Progress update failed for item {ItemId}, user {UserId}")]
+    private static partial void LogProgressUpdateFailed(ILogger logger, string itemId, string userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Unexpected error syncing progress for item {ItemId}")]
+    private static partial void LogProgressSyncError(ILogger logger, Exception ex, string itemId);
 }

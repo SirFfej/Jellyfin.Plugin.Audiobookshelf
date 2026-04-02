@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(bash -n \"c:/Users/SirFfej/CodeEtAl/Jellyfin.Plugin.Audiobookshelf/test-connection.sh\")",
+      "Bash(bash -n \"c:/Users/SirFfej/CodeEtAl/Jellyfin.Plugin.Audiobookshelf/setup-abs.sh\")"
+    ]
+  }
+}

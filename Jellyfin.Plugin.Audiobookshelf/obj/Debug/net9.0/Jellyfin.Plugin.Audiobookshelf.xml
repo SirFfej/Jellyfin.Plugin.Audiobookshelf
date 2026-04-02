@@ -608,6 +608,53 @@
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Helpers.TimeHelper.FromUnixMs(System.Int64)">
             <summary>Converts Unix epoch milliseconds to a <see cref="T:System.DateTime"/> (UTC).</summary>
         </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLoggerProvider">
+            <summary>
+            Registers itself with Jellyfin's <see cref="T:Microsoft.Extensions.Logging.ILoggerFactory"/> and intercepts every
+            <c>ILogger&lt;T&gt;</c> call whose source context begins with
+            <c>Jellyfin.Plugin.Audiobookshelf</c>, writing those entries to a daily-rolling
+            file in Jellyfin's log directory alongside the main server log.
+            </summary>
+            <remarks>
+            <para>
+            All file I/O is performed on a dedicated background thread via an unbounded
+            <see cref="T:System.Threading.Channels.Channel`1"/> so the caller never blocks while logging.
+            </para>
+            <para>
+            Log files are named <c>audiobookshelf-yyyyMMdd.log</c> and files older than
+            <see cref="F:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLoggerProvider.MaxRetainedFiles"/> days are deleted on startup.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLoggerProvider.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLoggerProvider"/> class.
+            </summary>
+            <param name="logDirectory">
+            Jellyfin log directory path (<see cref="P:MediaBrowser.Common.Configuration.IApplicationPaths.LogDirectoryPath"/>).
+            </param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLoggerProvider.CreateLogger(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLoggerProvider.Dispose">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLogger">
+            <summary>
+            Writes a single log entry to the shared <see cref="T:System.Threading.Channels.ChannelWriter`1"/> queue.
+            Instances are cached per category name inside <see cref="T:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLoggerProvider"/>.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLogger.BeginScope``1(``0)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLogger.IsEnabled(Microsoft.Extensions.Logging.LogLevel)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Logging.AbsFileLogger.Log``1(Microsoft.Extensions.Logging.LogLevel,Microsoft.Extensions.Logging.EventId,``0,System.Exception,System.Func{``0,System.Exception,System.String})">
+            <inheritdoc />
+        </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.Plugin">
             <summary>
             The Audiobookshelf Jellyfin plugin entry point.
@@ -659,7 +706,7 @@
             Disable this when using the channel mode exclusively to avoid items appearing twice.
             </remarks>
         </member>
-        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider})">
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,System.Net.Http.IHttpClientFactory,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider})">
             <summary>
             Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider"/> class.
             </summary>

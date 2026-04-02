@@ -12,3 +12,4 @@ C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobo
 C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.xml
 C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.pdb
 C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\ref\Jellyfin.Plugin.Audiobookshelf.dll
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.sourcelink.json

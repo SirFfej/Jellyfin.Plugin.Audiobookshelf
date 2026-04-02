@@ -28,6 +28,7 @@ namespace Jellyfin.Plugin.Audiobookshelf.Providers;
 public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
 {
     private readonly AbsApiClientFactory _clientFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AbsBookMetadataProvider> _logger;
 
     /// <summary>
@@ -35,9 +36,11 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
     /// </summary>
     public AbsBookMetadataProvider(
         AbsApiClientFactory clientFactory,
+        IHttpClientFactory httpClientFactory,
         ILogger<AbsBookMetadataProvider> logger)
     {
         _clientFactory = clientFactory;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -201,11 +204,11 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
     }
 
     /// <inheritdoc />
-    public async Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
+    public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
     {
-        var httpClient = _clientFactory.GetAdminClient();
         // Cover image URL is public — no auth needed
-        return await new HttpClient().GetAsync(url, cancellationToken).ConfigureAwait(false);
+        var httpClient = _httpClientFactory.CreateClient(AbsApiClient.HttpClientName);
+        return httpClient.GetAsync(url, cancellationToken);
     }
 
     // -------------------------------------------------------------------------

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jellyfin.Plugin.Audiobookshelf")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0.0+ded33e37c7276d6b1d545886fc4fe595afe4afcd")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jellyfin.Plugin.Audiobookshelf")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jellyfin.Plugin.Audiobookshelf")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

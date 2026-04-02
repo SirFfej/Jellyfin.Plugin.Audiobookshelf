@@ -18,7 +18,7 @@ namespace Jellyfin.Plugin.Audiobookshelf.Sync;
 /// Scheduled task that pulls ABS listening progress into Jellyfin for all mapped users.
 /// Uses "last-write-wins" based on the ABS <c>lastUpdate</c> timestamp.
 /// </summary>
-public class InboundSyncTask : IScheduledTask
+public partial class InboundSyncTask : IScheduledTask
 {
     private readonly AbsApiClientFactory _clientFactory;
     private readonly IUserDataManager _userDataManager;
@@ -109,7 +109,7 @@ public class InboundSyncTask : IScheduledTask
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "ABS inbound sync failed for user {UserId}", jellyfinUserId);
+                LogSyncFailed(_logger, ex, jellyfinUserId);
             }
 
             processed++;
@@ -147,14 +147,14 @@ public class InboundSyncTask : IScheduledTask
     {
         if (!Guid.TryParse(jellyfinUserId, out var jellyfinGuid))
         {
-            _logger.LogWarning("Skipping sync for invalid Jellyfin user ID: {Id}", jellyfinUserId);
+            LogInvalidUserId(_logger, jellyfinUserId);
             return;
         }
 
         User? jellyfinUser = _userManager.GetUserById(jellyfinGuid);
         if (jellyfinUser is null)
         {
-            _logger.LogDebug("Jellyfin user {UserId} not found — skipping ABS sync", jellyfinUserId);
+            LogUserNotFound(_logger, jellyfinUserId);
             return;
         }
 
@@ -207,8 +207,21 @@ public class InboundSyncTask : IScheduledTask
             _userDataManager.SaveUserData(jellyfinUser, item, jellyfinUserData,
                 UserDataSaveReason.Import, ct);
 
-            _logger.LogDebug("Updated Jellyfin progress for item {ItemId} from ABS ({CurrentTime}s)",
-                absItemId, absProgress.CurrentTime);
+            LogProgressUpdated(_logger, absItemId!, absProgress.CurrentTime);
         }
     }
+
+    // ── Source-generated log methods ──────────────────────────────────────────
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping sync: invalid Jellyfin user ID '{UserId}'")]
+    private static partial void LogInvalidUserId(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Jellyfin user '{UserId}' not found — skipping ABS sync")]
+    private static partial void LogUserNotFound(ILogger logger, string userId);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Updated Jellyfin progress for ABS item '{ItemId}' → {CurrentTime:F1}s")]
+    private static partial void LogProgressUpdated(ILogger logger, string itemId, double currentTime);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Inbound sync failed for user '{UserId}'")]
+    private static partial void LogSyncFailed(ILogger logger, Exception ex, string userId);
 }

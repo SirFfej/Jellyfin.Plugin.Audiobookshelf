@@ -60,9 +60,17 @@ if [[ "$JELLYFIN_FOUND" == "true" ]]; then
     host_path=$(echo "$mount_line" | cut -d: -f1)
     container_path=$(echo "$mount_line" | cut -d: -f2)
 
-    # Skip Jellyfin config/cache/log directories — ABS doesn't need those
-    if echo "$container_path" | grep -qiE '(config|cache|log|transcode|metadata)'; then
+    # Skip Jellyfin config/cache/log directories — ABS doesn't need those.
+    # Check both container path and host path (host paths like /etc/jellyfin or
+    # /var/lib/jellyfin are config/data dirs even if the container path is unusual).
+    if echo "$container_path $host_path" | grep -qiE '(config|cache|log|transcode|metadata)'; then
       info "  Skipping Jellyfin config mount: $host_path → $container_path"
+      continue
+    fi
+
+    # Skip paths that don't exist on the host (e.g. unfilled placeholders)
+    if [[ ! -e "$host_path" ]]; then
+      warn "  Skipping non-existent host path: $host_path"
       continue
     fi
 
@@ -84,7 +92,8 @@ if [[ "$JELLYFIN_FOUND" == "true" ]]; then
     dst=$(echo "$mount_json" | grep -oP '"Destination"\s*:\s*"\K[^"]+' || true)
     [[ -z "$src" || -z "$dst" ]] && continue
     # skip if already captured via Binds
-    if echo "$dst" | grep -qiE '(config|cache|log|transcode)'; then continue; fi
+    if echo "$dst $src" | grep -qiE '(config|cache|log|transcode|metadata)'; then continue; fi
+    if [[ ! -e "$src" ]]; then continue; fi
     if echo "${AUDIOBOOK_PATHS[*]-} ${OTHER_MEDIA_PATHS[*]-}" | grep -q "$src"; then continue; fi
     if echo "$src $dst" | grep -qiE '(audiobook|audio.?book|abs)'; then
       AUDIOBOOK_PATHS+=("$src")
@@ -118,9 +127,64 @@ fi
 
 # ── 3. Prompt for any missing paths ──────────────────────────────────────────
 if [[ ${#AUDIOBOOK_PATHS[@]} -eq 0 ]]; then
-  warn "No audiobook directory detected from Jellyfin."
-  read -rp "  Enter absolute path to your audiobooks directory: " user_ab_path
-  [[ -n "$user_ab_path" ]] && AUDIOBOOK_PATHS=("$user_ab_path")
+  # Before giving up, scan one level of subdirectories in OTHER_MEDIA_PATHS for
+  # audiobook-named folders (e.g. /mnt/media/Books → /mnt/media/Books/Audiobooks)
+  if [[ ${#OTHER_MEDIA_PATHS[@]} -gt 0 ]]; then
+    for p in "${OTHER_MEDIA_PATHS[@]}"; do
+      while IFS= read -r subdir; do
+        [[ -d "$subdir" ]] || continue
+        subname=$(basename "$subdir")
+        if echo "$subname" | grep -qiE '(audiobook|audio.?book|abs)'; then
+          AUDIOBOOK_PATHS+=("$subdir")
+          ok "  Audiobook dir (subdir): $subdir"
+        fi
+      done < <(find "$p" -maxdepth 1 -mindepth 1 -type d 2>/dev/null || true)
+    done
+  fi
+fi
+
+if [[ ${#AUDIOBOOK_PATHS[@]} -eq 0 ]]; then
+  warn "No audiobook directory could be auto-detected from Jellyfin mounts."
+
+  # Build a numbered candidate list so the user can pick instead of typing blind
+  CANDIDATES=()
+
+  if [[ ${#OTHER_MEDIA_PATHS[@]} -gt 0 ]]; then
+    info "Mounts detected from Jellyfin (none matched audiobook keywords):"
+    for p in "${OTHER_MEDIA_PATHS[@]}"; do
+      info "  $p"
+      # Offer each detected mount itself as a candidate
+      CANDIDATES+=("$p")
+      # Also offer its immediate subdirectories as candidates
+      while IFS= read -r subdir; do
+        [[ -d "$subdir" ]] && CANDIDATES+=("$subdir")
+      done < <(find "$p" -maxdepth 1 -mindepth 1 -type d 2>/dev/null || true)
+    done
+  fi
+
+  if [[ ${#CANDIDATES[@]} -gt 0 ]]; then
+    echo ""
+    info "Select the audiobooks directory or enter a custom path:"
+    for i in "${!CANDIDATES[@]}"; do
+      printf "  %2d) %s\n" "$((i+1))" "${CANDIDATES[$i]}"
+    done
+    printf "  %2d) Enter a different path\n" "$((${#CANDIDATES[@]}+1))"
+    echo ""
+    read -rp "  Choice [1]: " ab_choice
+    ab_choice="${ab_choice:-1}"
+
+    if [[ "$ab_choice" =~ ^[0-9]+$ ]] \
+        && (( ab_choice >= 1 && ab_choice <= ${#CANDIDATES[@]} )); then
+      AUDIOBOOK_PATHS=("${CANDIDATES[$((ab_choice-1))]}")
+      ok "Using: ${AUDIOBOOK_PATHS[0]}"
+    else
+      read -rp "  Enter absolute path to your audiobooks directory: " user_ab_path
+      [[ -n "$user_ab_path" ]] && AUDIOBOOK_PATHS=("$user_ab_path")
+    fi
+  else
+    read -rp "  Enter absolute path to your audiobooks directory: " user_ab_path
+    [[ -n "$user_ab_path" ]] && AUDIOBOOK_PATHS=("$user_ab_path")
+  fi
 fi
 
 # ABS config/metadata directories — default to sibling of first audiobook path
@@ -169,14 +233,20 @@ build_volumes() {
 
 # ── 6. Build network block ────────────────────────────────────────────────────
 build_networks_service() {
-  if [[ -n "${JELLYFIN_NETWORK:-}" && "$JELLYFIN_NETWORK" != "bridge" ]]; then
+  # Skip host and bridge — both are built-in Docker networks that cannot be
+  # declared as external user-defined networks in a compose file.
+  if [[ -n "${JELLYFIN_NETWORK:-}" \
+      && "$JELLYFIN_NETWORK" != "bridge" \
+      && "$JELLYFIN_NETWORK" != "host" ]]; then
     echo "    networks:"
     echo "      - ${JELLYFIN_NETWORK}"
   fi
 }
 
 build_networks_top() {
-  if [[ -n "${JELLYFIN_NETWORK:-}" && "$JELLYFIN_NETWORK" != "bridge" ]]; then
+  if [[ -n "${JELLYFIN_NETWORK:-}" \
+      && "$JELLYFIN_NETWORK" != "bridge" \
+      && "$JELLYFIN_NETWORK" != "host" ]]; then
     echo ""
     echo "networks:"
     echo "  ${JELLYFIN_NETWORK}:"
