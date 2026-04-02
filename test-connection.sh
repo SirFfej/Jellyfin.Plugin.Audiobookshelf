@@ -224,12 +224,18 @@ if body=$(http_get "${ABS_URL}/api/libraries" "Authorization: Bearer ${ABS_TOKEN
   book_lib_count=$({ echo "$body" | grep -oP '"mediaType"\s*:\s*"book"' || true; } | wc -l | tr -d ' ')
   first_book_lib=$(echo "$body" | grep -oP '"id"\s*:\s*"\K[^"]+' | head -1 || true)
 
+  podcast_lib_count=$({ echo "$body" | grep -oP '"mediaType"\s*:\s*"podcast"' || true; } | wc -l | tr -d ' ')
+
   if [[ "$book_lib_count" -eq 0 ]]; then
-    flunk "No book libraries found — only podcast libraries will be ignored by the plugin" \
-      "Create a book library in ABS: ABS → Libraries → + Add Library → select 'Book'" \
-      "Podcast libraries are intentionally filtered out by the plugin"
+    flunk "No book libraries found — the plugin requires at least one ABS book library" \
+      "Create a book library in ABS: ABS → Libraries → + Add Library → select 'Book'"
   else
     pass "Book librar$([ "$book_lib_count" -eq 1 ] && echo y || echo ies): ${book_lib_count} found (plugin will use these)"
+  fi
+
+  if [[ "$podcast_lib_count" -gt 0 ]]; then
+    info "Podcast librar$([ "$podcast_lib_count" -eq 1 ] && echo y || echo ies): ${podcast_lib_count} found"
+    hint "Podcast support is opt-in — enable 'Include podcast libraries' in plugin settings to use them"
   fi
 else
   flunk "GET /api/libraries failed" \
@@ -386,8 +392,10 @@ fi
 echo "  4. Click 'Test Connection'"
 echo "  5. Click 'Discover Users' to auto-match Jellyfin ↔ ABS accounts"
 echo "  6. Enable inbound/outbound sync as desired"
-echo "  7. Click 'Save'"
-echo "  8. Run a metadata refresh on your audiobook library"
+echo "  7. (Optional) Enable 'Include podcast libraries' if you use ABS for podcasts"
+echo "  8. Click 'Save'"
+echo "  9. Run a metadata refresh on your audiobook library"
+echo " 10. Run 'Audiobookshelf: Sync Chapters' from Dashboard → Scheduled Tasks to populate chapter markers"
 
 # ── 8. Summary ────────────────────────────────────────────────────────────────
 echo ""
