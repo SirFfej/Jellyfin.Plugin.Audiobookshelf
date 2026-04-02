@@ -59,6 +59,13 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool EnableMetadataProvider { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether ABS podcast libraries are included when
+    /// auto-discovering libraries. When <c>false</c> (default), only book libraries are considered.
+    /// Full podcast metadata enrichment requires a dedicated podcast provider (not yet implemented).
+    /// </summary>
+    public bool EnablePodcastLibraries { get; set; } = false;
+
+    /// <summary>
     /// Gets or sets the minimum title + author match score (0.0–1.0) required to accept a
     /// fuzzy match in the metadata provider's fallback matching logic.
     /// </summary>

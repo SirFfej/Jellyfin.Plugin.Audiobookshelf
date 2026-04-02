@@ -1,4 +1,8 @@
+using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Audiobookshelf.Services;
@@ -16,6 +20,7 @@ public class UserDiscoveryController : ControllerBase
 {
     private readonly UserMappingService _mappingService;
     private readonly TokenVault _tokenVault;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<UserDiscoveryController> _logger;
 
     /// <summary>
@@ -23,15 +28,74 @@ public class UserDiscoveryController : ControllerBase
     /// </summary>
     /// <param name="mappingService">User mapping service.</param>
     /// <param name="tokenVault">Token vault for secure storage.</param>
+    /// <param name="httpClientFactory">HTTP client factory for proxied requests.</param>
     /// <param name="logger">Logger instance.</param>
     public UserDiscoveryController(
         UserMappingService mappingService,
         TokenVault tokenVault,
+        IHttpClientFactory httpClientFactory,
         ILogger<UserDiscoveryController> logger)
     {
         _mappingService = mappingService;
         _tokenVault = tokenVault;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Proxies a connection test to an Audiobookshelf server.
+    /// The token is read from the <c>X-Abs-Token</c> request header so it is never
+    /// exposed in the browser's network inspector as a direct outbound call to ABS.
+    /// </summary>
+    /// <param name="serverUrl">ABS server URL (query string).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Username on success, error message on failure.</returns>
+    [HttpGet("TestConnection")]
+    public async Task<ActionResult<TestConnectionResponse>> TestConnection(
+        [FromQuery] string serverUrl,
+        CancellationToken ct = default)
+    {
+        var token = Request.Headers["X-Abs-Token"].ToString();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return BadRequest("X-Abs-Token header is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(serverUrl))
+        {
+            return BadRequest("serverUrl query parameter is required");
+        }
+
+        string normalizedUrl = serverUrl.TrimEnd('/');
+
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient(AbsApiClient.HttpClientName);
+            using var request = new HttpRequestMessage(HttpMethod.Get, normalizedUrl + "/api/me");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            using var response = await httpClient.SendAsync(request, ct).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return Ok(new TestConnectionResponse
+                {
+                    Success = false,
+                    Error = $"ABS returned HTTP {(int)response.StatusCode}"
+                });
+            }
+
+            var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(body);
+            string username = doc.RootElement.TryGetProperty("username", out var u) ? u.GetString() ?? string.Empty : string.Empty;
+
+            return Ok(new TestConnectionResponse { Success = true, Username = username });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "ABS connection test failed for {Url}", normalizedUrl);
+            return Ok(new TestConnectionResponse { Success = false, Error = "Connection failed — check URL and token" });
+        }
     }
 
     /// <summary>
@@ -141,6 +205,27 @@ public class UserDiscoveryController : ControllerBase
 
         return matches;
     }
+}
+
+/// <summary>
+/// Response from the TestConnection proxy endpoint.
+/// </summary>
+public class TestConnectionResponse
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether the connection succeeded.
+    /// </summary>
+    public bool Success { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ABS username returned by <c>GET /api/me</c> on success.
+    /// </summary>
+    public string Username { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a human-readable error message on failure.
+    /// </summary>
+    public string? Error { get; set; }
 }
 
 /// <summary>

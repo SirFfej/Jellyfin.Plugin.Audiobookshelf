@@ -156,6 +156,13 @@
                     </label>
                 </div>
 
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input type="checkbox" id="absEnablePodcasts" class="emby-checkbox" />
+                        <span>Include podcast libraries when auto-discovering (experimental — metadata enrichment for podcasts is not yet implemented)</span>
+                    </label>
+                </div>
+
                 <div class="verticalSection">
                     <h3 class="sectionTitle">User Mapping</h3>
                     <p class="fieldDescription">
@@ -212,26 +219,122 @@
             page.querySelector('#absEnableOutbound').checked = config.EnableOutboundSync !== false;
             page.querySelector('#absEnableInbound').checked = config.EnableInboundSync !== false;
             page.querySelector('#absEnableMetadata').checked = config.EnableMetadataProvider !== false;
+            page.querySelector('#absEnablePodcasts').checked = config.EnablePodcastLibraries === true;
             renderUserTokenTable(page, config.UserTokenMap || {});
         });
+    }
+
+    function esc(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
     function renderUserTokenTable(page, tokenMap) {
         const container = page.querySelector('#absUserTokenList');
         ApiClient.getUsers().then(function (users) {
-            let html = '<table class="detailTable" style="width:100%"><thead><tr>' +
-                '<th>Jellyfin User</th><th>ABS API Token</th></tr></thead><tbody>';
-            users.forEach(function (user) {
-                const token = tokenMap[user.Id] || '';
-                html += '<tr>' +
-                    '<td>' + user.Name + '</td>' +
-                    '<td><input type="password" class="emby-input abs-user-token" autocomplete="off" ' +
-                    'data-userid="' + user.Id + '" value="' + token + '" style="width:100%"/></td>' +
-                    '</tr>';
-            });
-            html += '</tbody></table>';
-            container.innerHTML = html;
+            const userMap = {};
+            users.forEach(function (u) { userMap[u.Id] = u.Name; });
+            rebuildTokenTable(container, tokenMap, userMap);
         });
+    }
+
+    function rebuildTokenTable(container, tokenMap, userMap) {
+        const mapped = Object.keys(tokenMap).filter(function (id) { return tokenMap[id]; });
+
+        let html = '<table class="detailTable" style="width:100%;margin-bottom:8px;">' +
+            '<thead><tr><th>Jellyfin User</th><th>ABS API Token</th><th style="width:40px;"></th></tr></thead>' +
+            '<tbody id="absTokenTableBody">';
+
+        mapped.forEach(function (userId) {
+            const name = esc(userMap[userId] || userId);
+            const token = esc(tokenMap[userId]);
+            html += '<tr data-userid="' + esc(userId) + '">' +
+                '<td>' + name + '</td>' +
+                '<td><input type="password" class="emby-input abs-user-token" autocomplete="off" ' +
+                'data-userid="' + esc(userId) + '" value="' + token + '" style="width:100%"/></td>' +
+                '<td><button type="button" class="emby-button abs-remove-token" title="Remove" ' +
+                'data-userid="' + esc(userId) + '" style="min-width:0;padding:4px 8px;">✕</button></td>' +
+                '</tr>';
+        });
+
+        html += '</tbody></table>';
+
+        const unmapped = Object.keys(userMap).filter(function (id) { return !tokenMap[id]; });
+        html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">';
+        html += '<select class="emby-select abs-add-user-select" style="flex:0 1 auto;min-width:160px;">' +
+            '<option value="">— Add user —</option>';
+        unmapped.forEach(function (id) {
+            html += '<option value="' + esc(id) + '">' + esc(userMap[id]) + '</option>';
+        });
+        html += '</select>';
+        html += '<input type="password" class="emby-input abs-add-user-token" autocomplete="off" ' +
+            'placeholder="ABS token for this user" style="flex:1 1 180px;"/>';
+        html += '<button type="button" is="emby-button" class="raised emby-button abs-add-token-btn">Add</button>';
+        html += '</div>';
+
+        container.innerHTML = html;
+
+        // Bind remove buttons
+        container.querySelectorAll('.abs-remove-token').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const userId = this.dataset.userid;
+                const row = container.querySelector('tr[data-userid="' + userId + '"]');
+                if (!row) return;
+                const name = row.cells[0].textContent;
+                row.remove();
+                // Return user to the Add dropdown
+                const select = container.querySelector('.abs-add-user-select');
+                if (select) {
+                    const opt = document.createElement('option');
+                    opt.value = userId;
+                    opt.textContent = name;
+                    select.appendChild(opt);
+                }
+            });
+        });
+
+        // Bind Add button
+        const addBtn = container.querySelector('.abs-add-token-btn');
+        if (addBtn) {
+            addBtn.addEventListener('click', function () {
+                const select = container.querySelector('.abs-add-user-select');
+                const tokenInput = container.querySelector('.abs-add-user-token');
+                const userId = select.value;
+                const token = tokenInput.value.trim();
+                if (!userId || !token) return;
+
+                const name = select.options[select.selectedIndex].text;
+                const tbody = container.querySelector('#absTokenTableBody');
+                const tr = document.createElement('tr');
+                tr.dataset.userid = userId;
+                tr.innerHTML = '<td>' + esc(name) + '</td>' +
+                    '<td><input type="password" class="emby-input abs-user-token" autocomplete="off" ' +
+                    'data-userid="' + esc(userId) + '" value="' + esc(token) + '" style="width:100%"/></td>' +
+                    '<td><button type="button" class="emby-button abs-remove-token" title="Remove" ' +
+                    'data-userid="' + esc(userId) + '" style="min-width:0;padding:4px 8px;">✕</button></td>';
+                tbody.appendChild(tr);
+
+                // Remove from dropdown, clear inputs
+                select.options[select.selectedIndex].remove();
+                select.value = '';
+                tokenInput.value = '';
+
+                // Bind remove on the new row
+                tr.querySelector('.abs-remove-token').addEventListener('click', function () {
+                    tr.remove();
+                    const sel = container.querySelector('.abs-add-user-select');
+                    if (sel) {
+                        const opt = document.createElement('option');
+                        opt.value = userId;
+                        opt.textContent = name;
+                        sel.appendChild(opt);
+                    }
+                });
+            });
+        }
     }
 
     function discoverUsers(page) {
@@ -408,6 +511,7 @@
             config.EnableOutboundSync = page.querySelector('#absEnableOutbound').checked;
             config.EnableInboundSync = page.querySelector('#absEnableInbound').checked;
             config.EnableMetadataProvider = page.querySelector('#absEnableMetadata').checked;
+            config.EnablePodcastLibraries = page.querySelector('#absEnablePodcasts').checked;
 
             const tokenInputs = page.querySelectorAll('.abs-user-token');
             const tokenMap = {};
@@ -429,14 +533,30 @@
         const token = page.querySelector('#absAdminToken').value;
         const status = page.querySelector('#absConnectionStatus');
         status.textContent = 'Testing…';
+        status.style.color = '';
 
-        fetch(url + '/api/me', {
-            headers: { 'Authorization': 'Bearer ' + token }
+        if (!url || !token) {
+            status.textContent = 'Server URL and Admin Token are required';
+            status.style.color = 'var(--error-color, red)';
+            return;
+        }
+
+        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/TestConnection?serverUrl=' + encodeURIComponent(url)), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Abs-Token': token
+            }
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-            status.style.color = 'var(--success-color, green)';
-            status.textContent = '✓ Connected as ' + (data.username || 'unknown');
+            if (data.Success) {
+                status.style.color = 'var(--success-color, green)';
+                status.textContent = '✓ Connected as ' + (data.Username || 'unknown');
+            } else {
+                status.style.color = 'var(--error-color, red)';
+                status.textContent = '✗ ' + (data.Error || 'Connection failed');
+            }
         })
         .catch(function () {
             status.style.color = 'var(--error-color, red)';

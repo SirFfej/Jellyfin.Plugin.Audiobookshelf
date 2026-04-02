@@ -79,6 +79,12 @@
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.Token">
             <summary>Gets the raw ABS API token used by this client (for URL construction).</summary>
         </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetAllUsersAsync(System.Threading.CancellationToken)">
+            <summary>
+            Returns all users from the ABS server (admin only).
+            Each user includes their API token.
+            </summary>
+        </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsOpenSessionsResponse">
             <summary>
             Wrapper for open sessions response from <c>GET /api/sessions/open</c>.
@@ -86,6 +92,14 @@
         </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.AbsOpenSessionsResponse.Sessions">
             <summary>Gets or sets the open sessions.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsAllUsersResponse">
+            <summary>
+            Wrapper for all users response from <c>GET /api/users</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.AbsAllUsersResponse.Users">
+            <summary>Gets or sets the list of all users.</summary>
         </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory">
             <summary>
@@ -505,6 +519,135 @@
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.IsActive">
             <summary>Gets or sets a value indicating whether the account is active.</summary>
         </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Token">
+            <summary>Gets or sets the user's API token (admin only).</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryController">
+            <summary>
+            Controller for user discovery and mapping between Jellyfin and Audiobookshelf.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryController.#ctor(Jellyfin.Plugin.Audiobookshelf.Services.UserMappingService,Jellyfin.Plugin.Audiobookshelf.Services.TokenVault,System.Net.Http.IHttpClientFactory,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryController})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryController"/> class.
+            </summary>
+            <param name="mappingService">User mapping service.</param>
+            <param name="tokenVault">Token vault for secure storage.</param>
+            <param name="httpClientFactory">HTTP client factory for proxied requests.</param>
+            <param name="logger">Logger instance.</param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryController.TestConnection(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Proxies a connection test to an Audiobookshelf server.
+            The token is read from the <c>X-Abs-Token</c> request header so it is never
+            exposed in the browser's network inspector as a direct outbound call to ABS.
+            </summary>
+            <param name="serverUrl">ABS server URL (query string).</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>Username on success, error message on failure.</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryController.DiscoverUsers(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Discovers and matches users between Jellyfin and Audiobookshelf.
+            The ABS admin token is read from the <c>X-Abs-Token</c> request header to
+            avoid logging it in Jellyfin's access log.
+            </summary>
+            <param name="serverUrl">ABS server URL (query string).</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>List of user matches.</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryController.SaveMappings(Jellyfin.Plugin.Audiobookshelf.Api.SaveMappingsRequest)">
+            <summary>
+            Saves the selected user mappings.
+            </summary>
+            <param name="request">Request containing matches to save.</param>
+            <returns>Number of mappings saved.</returns>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.TestConnectionResponse">
+            <summary>
+            Response from the TestConnection proxy endpoint.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.TestConnectionResponse.Success">
+            <summary>
+            Gets or sets a value indicating whether the connection succeeded.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.TestConnectionResponse.Username">
+            <summary>
+            Gets or sets the ABS username returned by <c>GET /api/me</c> on success.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.TestConnectionResponse.Error">
+            <summary>
+            Gets or sets a human-readable error message on failure.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryResponse">
+            <summary>
+            Response containing user discovery results.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryResponse.Matches">
+            <summary>
+            Gets or sets the list of user matches.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.UserMatchDto">
+            <summary>
+            DTO for a user match between Jellyfin and ABS.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.UserMatchDto.JellyfinUserId">
+            <summary>
+            Gets or sets the Jellyfin user ID.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.UserMatchDto.JellyfinUsername">
+            <summary>
+            Gets or sets the Jellyfin username.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.UserMatchDto.AbsUserId">
+            <summary>
+            Gets or sets the ABS user ID.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.UserMatchDto.AbsUsername">
+            <summary>
+            Gets or sets the ABS username.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.UserMatchDto.MatchType">
+            <summary>
+            Gets or sets the match type (exact, fuzzy, none).
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.UserMatchDto.IsSelected">
+            <summary>
+            Gets or sets a value indicating whether this match is selected for linking.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.SaveMappingsRequest">
+            <summary>
+            Request to save user mappings.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SaveMappingsRequest.Matches">
+            <summary>
+            Gets or sets the list of matches to save.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.SaveMappingsResponse">
+            <summary>
+            Response containing the number of mappings saved.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SaveMappingsResponse.SavedCount">
+            <summary>
+            Gets or sets the number of mappings saved.
+            </summary>
+        </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration">
             <summary>
             Plugin configuration persisted as XML by <see cref="T:MediaBrowser.Common.Plugins.BasePlugin`1"/>.
@@ -558,6 +701,13 @@
             <summary>
             Gets or sets a value indicating whether the metadata provider path is active.
             Disable when using the channel path exclusively to avoid double-display.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.EnablePodcastLibraries">
+            <summary>
+            Gets or sets a value indicating whether ABS podcast libraries are included when
+            auto-discovering libraries. When <c>false</c> (default), only book libraries are considered.
+            Full podcast metadata enrichment requires a dedicated podcast provider (not yet implemented).
             </summary>
         </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.TitleMatchConfidenceThreshold">
@@ -732,7 +882,7 @@
             so the image URL can be passed directly to Jellyfin without embedding a token.
             </remarks>
         </member>
-        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider})">
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,System.Net.Http.IHttpClientFactory,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider})">
             <summary>
             Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider"/> class.
             </summary>
@@ -751,6 +901,164 @@
         </member>
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.GetImageResponse(System.String,System.Threading.CancellationToken)">
             <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Services.TokenVault">
+            <summary>
+            Token storage backed by plugin configuration.
+            Tokens are stored in Jellyfin's standard plugin config file (XML, on-disk).
+            A system keyring is not used because the plugin runs inside a Docker container
+            where no keyring daemon or D-Bus session is available.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Services.TokenVault.#ctor(Jellyfin.Plugin.Audiobookshelf.PluginConfiguration,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Services.TokenVault})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Services.TokenVault"/> class.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Services.TokenVault.StoreTokenAsync(System.String,System.String)">
+            <summary>
+            Stores an ABS API token for a Jellyfin user.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Services.TokenVault.GetTokenAsync(System.String)">
+            <summary>
+            Retrieves the ABS API token for a Jellyfin user, or <c>null</c> if not mapped.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Services.TokenVault.DeleteTokenAsync(System.String)">
+            <summary>
+            Removes the ABS API token for a Jellyfin user.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Services.UserMatch">
+            <summary>
+            Represents a potential match between a Jellyfin user and an ABS user.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Services.UserMatch.JellyfinUser">
+            <summary>
+            Gets or sets the Jellyfin user.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Services.UserMatch.AbsUser">
+            <summary>
+            Gets or sets the Audiobookshelf user.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Services.UserMatch.MatchType">
+            <summary>
+            Gets or sets the match type.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Services.UserMatch.IsSelected">
+            <summary>
+            Gets or sets a value indicating whether this match is selected for linking.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Services.UserMatchType">
+            <summary>
+            The type of user match.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Plugin.Audiobookshelf.Services.UserMatchType.Exact">
+            <summary>
+            Exact username match (case-insensitive).
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Plugin.Audiobookshelf.Services.UserMatchType.Fuzzy">
+            <summary>
+            Fuzzy username match.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Plugin.Audiobookshelf.Services.UserMatchType.None">
+            <summary>
+            No match found.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Services.JellyfinUserInfo">
+            <summary>
+            Information about a Jellyfin user for display.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Services.JellyfinUserInfo.Id">
+            <summary>
+            Gets or sets the user ID.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Services.JellyfinUserInfo.Username">
+            <summary>
+            Gets or sets the username.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Services.JellyfinUserInfo.DisplayName">
+            <summary>
+            Gets or sets the display name.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Services.UserMappingService">
+            <summary>
+            Service for discovering and mapping users between Jellyfin and Audiobookshelf.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Services.UserMappingService.#ctor(MediaBrowser.Controller.Library.IUserManager,Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,Jellyfin.Plugin.Audiobookshelf.Services.TokenVault,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Services.UserMappingService})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Services.UserMappingService"/> class.
+            </summary>
+            <param name="userManager">Jellyfin user manager.</param>
+            <param name="clientFactory">ABS API client factory.</param>
+            <param name="tokenVault">Token vault for secure storage.</param>
+            <param name="logger">Logger instance.</param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Services.UserMappingService.DiscoverUsersAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Discovers and matches users between Jellyfin and Audiobookshelf.
+            </summary>
+            <param name="adminToken">Admin API token for ABS.</param>
+            <param name="serverUrl">ABS server URL.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>List of user matches with match types.</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Services.UserMappingService.SaveMappingsAsync(System.Collections.Generic.List{Jellyfin.Plugin.Audiobookshelf.Services.UserMatch})">
+            <summary>
+            Saves the selected user mappings to the token vault.
+            </summary>
+            <param name="matches">The user matches to save.</param>
+            <returns>Number of mappings saved.</returns>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask">
+            <summary>
+            Scheduled task that populates Jellyfin chapter markers from Audiobookshelf chapter data.
+            Run this manually after a metadata refresh, or on a schedule, to keep chapter lists in sync.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,MediaBrowser.Controller.Library.ILibraryManager,MediaBrowser.Controller.Chapters.IChapterManager,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask"/> class.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.Key">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.Category">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.GetDefaultTriggers">
+            <inheritdoc />
+            <remarks>
+            No default triggers — run manually after a metadata refresh or on demand.
+            </remarks>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.ExecuteAsync(System.IProgress{System.Double},System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.__LogChaptersSavedStruct">
+            <summary> This API supports the logging infrastructure and is not intended to be used directly from your code. It is subject to change in the future. </summary>
         </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask">
             <summary>
@@ -780,6 +1088,40 @@
         </member>
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask.GetDefaultTriggers">
             <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask">
+            <summary>
+            Scheduled task that pushes Jellyfin playback progress to Audiobookshelf for all mapped users.
+            Complements <see cref="T:Jellyfin.Plugin.Audiobookshelf.Sync.ProgressSyncService"/>, which handles real-time per-event pushes.
+            This task is useful for bulk re-sync after ABS was unreachable, or as a periodic backstop.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,MediaBrowser.Controller.Library.IUserDataManager,MediaBrowser.Controller.Library.IUserManager,MediaBrowser.Controller.Library.ILibraryManager,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask"/> class.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask.Key">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask.Category">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask.ExecuteAsync(System.IProgress{System.Double},System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.OutboundSyncTask.GetDefaultTriggers">
+            <inheritdoc />
+            <remarks>
+            No default triggers — the real-time <see cref="T:Jellyfin.Plugin.Audiobookshelf.Sync.ProgressSyncService"/> handles day-to-day pushes.
+            This task is intended for on-demand use or as a manual backstop.
+            </remarks>
         </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.Sync.ProgressSyncService">
             <summary>
