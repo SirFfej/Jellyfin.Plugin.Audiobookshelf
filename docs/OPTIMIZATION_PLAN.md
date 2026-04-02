@@ -1,86 +1,91 @@
 # Jellyfin.Plugin.Audiobookshelf - Optimization Roadmap
 
 ## Overview
-Performance improvements planned for the Audiobookshelf Jellyfin plugin.
+Performance improvements and features for the Audiobookshelf Jellyfin plugin.
 
 ---
 
-## Planned Optimizations
+## Implemented ✓
 
-### Phase 1: High Impact (Sync Performance)
+### Performance Optimizations (dev-optimization branch)
 
-#### 1. Parallelize User Sync
-**File:** `InboundSyncTask.cs:102-117`
-**Issue:** Users processed sequentially - O(n) time
-**Fix:** Use `Task.WhenAll` to sync users in parallel
+| # | Optimization | Status | Notes |
+|---|--------------|--------|-------|
+| 1.1 | Parallelize user sync | ✓ Done | `InboundSyncTask.cs` - `Task.WhenAll` |
+| 1.2 | Levenshtein space opt | ✓ Done | `ItemMatcher.cs` - O(min(n,m)) space |
+| 2.1 | Disable AutoFlush | ✓ Done | `AbsFileLoggerProvider.cs` - buffered writes |
+| 2.2 | API retry logic | ✓ Done | `AbsApiClient.cs` - 3 retries with backoff |
+| 2.3 | Compile regex | ✓ Done | `AbsBookMetadataProvider.cs` - static patterns |
 
-```csharp
-// Current: Sequential
-foreach (var (jellyfinUserId, absToken) in userTokenPairs)
-{
-    await SyncUserProgressAsync(...);
-}
+### Auto User Mapping (dev-optimization branch)
 
-// Proposed: Parallel
-var tasks = userTokenPairs.Select(pair => 
-    SyncUserProgressAsync(pair.JellyfinUserId, pair.AbsToken, cancellationToken));
-await Task.WhenAll(tasks);
+| # | Feature | Status | Files |
+|---|---------|--------|-------|
+| U1 | TokenVault with keyring | ✓ Done | `Services/TokenVault.cs` |
+| U2 | UserMappingService | ✓ Done | `Services/UserMappingService.cs` |
+| U3 | REST API controller | ✓ Done | `Api/UserDiscoveryController.cs` |
+| U4 | GetAllUsersAsync | ✓ Done | `Api/AbsApiClient.cs` |
+| U5 | Config page UI | ✓ Done | `Configuration/configPage.html` |
+
+---
+
+## Planned
+
+### Phase 3: Low Impact (Not Started)
+
+| # | Optimization | Effort | Impact |
+|---|--------------|--------|--------|
+| 3.1 | String allocations | Low | Low |
+| 3.2 | Early exit matching | Low | Low |
+| 3.3 | Dictionary lookups | Medium | Low |
+
+---
+
+## Auto User Mapping - Implementation Details
+
+### Storage Strategy
+1. **Primary:** System keyring via KeySharp (Linux libsecret, macOS Keychain, Windows Credential Manager)
+2. **Fallback:** Plugin config (requires explicit user approval after warning)
+
+### API Endpoints
+```
+GET  /Audiobookshelf/UserDiscovery/KeyringStatus
+POST /Audiobookshelf/UserDiscovery/ApproveFallback
+GET  /Audiobookshelf/UserDiscovery/Discover?adminToken=&serverUrl=
+POST /Audiobookshelf/UserDiscovery/SaveMappings
 ```
 
-#### 2. Optimize Levenshtein Algorithm
-**File:** `ItemMatcher.cs:124-145`
-**Issue:** O(n*m) 2D array allocation per call
-**Fix:** Use 2-row space optimization - O(min(n,m)) space
+### User Matching
+- Exact username match (case-insensitive)
+- Manual selection for unmatched users
+- ABS tokens stored securely per-user
+
+### Linux Requirement
+```bash
+sudo apt-get install libsecret-1-dev  # Debian/Ubuntu
+sudo yum install libsecret-devel       # Red Hat/CentOS
+sudo pacman -Sy libsecret             # Arch
+```
 
 ---
 
-### Phase 2: Medium Impact (Reliability & I/O)
+## Testing
 
-#### 3. Disable File Logger Buffering
-**File:** `AbsFileLoggerProvider.cs:113-116`
-**Issue:** `AutoFlush=true` causes disk syscall per log entry
-**Fix:** Use buffered writes with configurable flush interval
-
-#### 4. Add Retry Logic to API Client
-**File:** `AbsApiClient.cs`
-**Issue:** No retry on transient network failures
-**Fix:** Implement exponential backoff retry (3 attempts)
-
-#### 5. Compile Regex Patterns
-**File:** `AbsBookMetadataProvider.cs:267,278`
-**Issue:** Regex compiled on every call
-**Fix:** Static compiled `Regex` instances
+After deploying optimizations:
+1. Profile sync time with multiple users
+2. Monitor memory allocations during bulk operations
+3. Verify log file I/O doesn't block main thread
+4. Test user discovery with multiple ABS users
+5. Verify keyring storage on each platform
 
 ---
 
-### Phase 3: Low Impact (Memory & Polish)
+## Branch Status
 
-#### 6. Reduce String Allocations
-**File:** `ProgressSyncService.cs:64,71`
-**Fix:** Consider `ValueStringBuilder` or cached formatters
-
-#### 7. Early Exit in Fuzzy Matching
-**File:** `ItemMatcher.cs:79-92`
-**Fix:** Return immediately on perfect match (score = 1.0)
-
-#### 8. Dictionary Lookup for Item Matching
-**File:** `ItemMatcher.cs:36-95`
-**Fix:** Build index dictionary for ASIN/ISBN lookups instead of linear search
-
----
-
-## Priority Matrix
-
-| Phase | Optimization | Effort | Impact |
-|-------|--------------|--------|--------|
-| 1.1   | Parallelize user sync | Low | High |
-| 1.2   | Levenshtein space opt | Medium | High |
-| 2.1   | Disable AutoFlush | Low | Medium |
-| 2.2   | API retry logic | Medium | Medium |
-| 2.3   | Compile regex | Low | Low-Medium |
-| 3.1   | String allocations | Low | Low |
-| 3.2   | Early exit matching | Low | Low |
-| 3.3   | Dictionary lookups | Medium | Low |
+| Branch | Status | Commit |
+|--------|--------|--------|
+| `main` | Production | (last stable) |
+| `dev-optimization` | Ready for testing | `352fcee` |
 
 ---
 
@@ -89,12 +94,3 @@ await Task.WhenAll(tasks);
 - Database layer changes (none exists)
 - Major architectural refactoring
 - Caching layer for library items (requires ABS API changes)
-
----
-
-## Testing
-
-After implementing optimizations:
-1. Profile sync time with multiple users
-2. Monitor memory allocations during bulk operations
-3. Verify log file I/O doesn't block main thread
