@@ -59,8 +59,11 @@ public static class ItemMatcher
         {
             string normalised = NormalisePath(filePath);
             var match = absItems.FirstOrDefault(i =>
-                NormalisePath(i.Path).Equals(normalised, StringComparison.OrdinalIgnoreCase)
-                || normalised.StartsWith(NormalisePath(i.Path), StringComparison.OrdinalIgnoreCase));
+            {
+                string p = NormalisePath(i.Path);
+                return p.Equals(normalised, StringComparison.OrdinalIgnoreCase)
+                    || normalised.StartsWith(p, StringComparison.OrdinalIgnoreCase);
+            });
             if (match is not null)
             {
                 return match;
@@ -79,6 +82,11 @@ public static class ItemMatcher
         foreach (var item in absItems)
         {
             double titleScore = FuzzyScore(title, item.Media.Metadata.Title);
+            if (titleScore <= 0)
+            {
+                continue;
+            }
+
             double authorScore = string.IsNullOrWhiteSpace(authorName)
                 ? 1.0
                 : FuzzyScore(authorName, item.Media.Metadata.AuthorName ?? string.Empty);
@@ -88,6 +96,10 @@ public static class ItemMatcher
             {
                 bestScore = combined;
                 bestCandidate = item;
+                if (bestScore >= 1.0)
+                {
+                    break;
+                }
             }
         }
 
@@ -108,12 +120,19 @@ public static class ItemMatcher
             return 0;
         }
 
+        // Fast path: exact match without allocating lowercased strings
+        if (a.AsSpan().Trim().Equals(b.AsSpan().Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return 1.0;
+        }
+
+        // Levenshtein requires normalized strings
         a = a.ToLowerInvariant().Trim();
         b = b.ToLowerInvariant().Trim();
 
-        if (a == b)
+        if (a.Length == 0 || b.Length == 0)
         {
-            return 1.0;
+            return 0;
         }
 
         int distance = LevenshteinDistance(a, b);

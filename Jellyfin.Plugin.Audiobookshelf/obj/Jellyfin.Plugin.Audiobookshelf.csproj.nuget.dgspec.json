@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\SirFfej\\CodeEtAl\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj": {}
+    "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj": {}
   },
   "projects": {
-    "C:\\Users\\SirFfej\\CodeEtAl\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj": {
+    "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\SirFfej\\CodeEtAl\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj",
+        "projectUniqueName": "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj",
         "projectName": "Jellyfin.Plugin.Audiobookshelf",
-        "projectPath": "C:\\Users\\SirFfej\\CodeEtAl\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj",
+        "projectPath": "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj",
         "packagesPath": "C:\\Users\\SirFfej\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\SirFfej\\CodeEtAl\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\obj\\",
+        "outputPath": "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\SirFfej\\AppData\\Roaming\\NuGet\\NuGet.Config"
