@@ -4,7 +4,7 @@
   <img alt="Alpha" src="https://img.shields.io/badge/status-alpha-red?labelColor=black" />
   <img alt="Jellyfin" src="https://img.shields.io/badge/Jellyfin-10.10%2B-00A4DC?logo=jellyfin&logoColor=white&labelColor=black" />
   <img alt=".NET" src="https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white&labelColor=black" />
-  <img alt="License" src="https://img.shields.io/github/license/SirFfej/Jellyfin.Plugin.Audiobookshelf?labelColor=black" />
+  <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-blue?labelColor=black" />
 </p>
 
 > [!WARNING]
@@ -58,7 +58,18 @@ Both services must be reachable from the machine running Jellyfin — either on 
 
 ## Installation
 
-### From source (current method — no plugin repository yet)
+### Via Jellyfin Plugin Repository (recommended)
+
+1. In Jellyfin, go to **Dashboard → Plugins → Repositories**
+2. Click **➕** and paste this URL:
+   ```
+   https://raw.githubusercontent.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/main/manifest.json
+   ```
+3. Go to **Dashboard → Plugins → Catalog**, find **Audiobookshelf**, and click **Install**
+4. Restart Jellyfin when prompted
+5. Go to **Dashboard → Plugins** and confirm **Audiobookshelf** appears
+
+### From source
 
 1. Clone the repository:
    ```bash
@@ -129,6 +140,7 @@ Two tasks appear under **Dashboard → Scheduled Tasks → Audiobookshelf**:
 |------|----------------|--------------|
 | **Pull Progress from ABS** | Every 10 min + on startup | Fetches ABS progress for all mapped users; updates Jellyfin positions using last-write-wins |
 | **Push Progress to ABS** | On demand only | Bulk-pushes all Jellyfin playback positions to ABS; useful after ABS was unreachable or for initial migration |
+| **Sync Chapters** | On demand only | Populates Jellyfin chapter markers from ABS chapter data for all matched books; run after a metadata refresh |
 
 The interval for the pull task is controlled by **Sync interval (minutes)** in the plugin settings.
 
@@ -170,10 +182,9 @@ Logs are retained for 7 days. The file is in addition to Jellyfin's main log —
 
 ## Known limitations
 
-- **No chapter import** — ABS chapter data is fetched but not yet written to Jellyfin. `ILibraryManager.SaveChapters` support is planned.
 - **Narrator display** — narrators are stored as `PersonKind.Unknown` with `Role = "Narrator"`. Jellyfin may not surface this in all client UIs.
 - **Author matching** — `BookInfo` in Jellyfin 10.10 does not expose author name during metadata lookup, so fuzzy fallback is title-only. This will be improved when Jellyfin adds author to `ItemLookupInfo`.
-- **Podcast libraries** — ABS podcast libraries are currently filtered out. Book libraries only.
+- **Podcast libraries** — ABS podcast libraries are excluded by default. Enable them under plugin settings; note that full metadata enrichment for podcasts is not yet implemented.
 
 ---
 
