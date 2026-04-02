@@ -27,6 +27,9 @@ namespace Jellyfin.Plugin.Audiobookshelf.Providers;
 /// </remarks>
 public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
 {
+    private static readonly Regex YearRegex = new(@"\b(\d{4})\b", RegexOptions.Compiled);
+    private static readonly Regex HtmlStripRegex = new("<[^>]*>", RegexOptions.Compiled);
+
     private readonly AbsApiClientFactory _clientFactory;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AbsBookMetadataProvider> _logger;
@@ -264,7 +267,7 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
             return year;
         }
 
-        var m = Regex.Match(yearStr, @"\b(\d{4})\b");
+        var m = YearRegex.Match(yearStr);
         return m.Success && int.TryParse(m.Groups[1].Value, out int extracted) ? extracted : null;
     }
 
@@ -275,7 +278,7 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
             return string.Empty;
         }
 
-        string stripped = Regex.Replace(html, "<[^>]*>", string.Empty);
+        string stripped = HtmlStripRegex.Replace(html, string.Empty);
         return System.Net.WebUtility.HtmlDecode(stripped).Trim();
     }
 

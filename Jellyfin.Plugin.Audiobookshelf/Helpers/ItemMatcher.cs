@@ -125,23 +125,36 @@ public static class ItemMatcher
     {
         int n = s.Length;
         int m = t.Length;
-        int[,] d = new int[n + 1, m + 1];
 
-        for (int i = 0; i <= n; i++) d[i, 0] = i;
-        for (int j = 0; j <= m; j++) d[0, j] = j;
-
-        for (int i = 1; i <= n; i++)
+        if (n > m)
         {
-            for (int j = 1; j <= m; j++)
-            {
-                int cost = s[i - 1] == t[j - 1] ? 0 : 1;
-                d[i, j] = Math.Min(
-                    Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
-                    d[i - 1, j - 1] + cost);
-            }
+            (s, t) = (t, s);
+            (n, m) = (m, n);
         }
 
-        return d[n, m];
+        var prev = new int[n + 1];
+        var curr = new int[n + 1];
+
+        for (int i = 0; i <= n; i++)
+        {
+            prev[i] = i;
+        }
+
+        for (int j = 1; j <= m; j++)
+        {
+            curr[0] = j;
+            for (int i = 1; i <= n; i++)
+            {
+                int cost = s[i - 1] == t[j - 1] ? 0 : 1;
+                curr[i] = Math.Min(
+                    Math.Min(prev[i] + 1, curr[i - 1] + 1),
+                    prev[i - 1] + cost);
+            }
+
+            (prev, curr) = (curr, prev);
+        }
+
+        return prev[n];
     }
 
     private static string NormalisePath(string path)

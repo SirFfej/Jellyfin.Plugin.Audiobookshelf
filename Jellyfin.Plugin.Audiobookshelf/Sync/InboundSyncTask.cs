@@ -96,24 +96,33 @@ public partial class InboundSyncTask : IScheduledTask
             return;
         }
 
-        double step = 100.0 / userTokenPairs.Count;
-        int processed = 0;
-
-        foreach (var (jellyfinUserId, absToken) in userTokenPairs)
+        var syncTasks = userTokenPairs.Select(async pair =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
             try
             {
-                await SyncUserProgressAsync(jellyfinUserId, absToken, cancellationToken).ConfigureAwait(false);
+                await SyncUserProgressAsync(pair.JellyfinUserId, pair.AbsToken, cancellationToken).ConfigureAwait(false);
+                return (pair.JellyfinUserId, Success: true, Error: (Exception?)null);
             }
             catch (Exception ex)
             {
-                LogSyncFailed(_logger, ex, jellyfinUserId);
+                return (pair.JellyfinUserId, Success: false, Error: ex);
             }
+        });
 
-            processed++;
-            progress.Report(processed * step);
+        var results = await Task.WhenAll(syncTasks).ConfigureAwait(false);
+
+        foreach (var (userId, success, error) in results)
+        {
+            if (!success && error is not null)
+            {
+                LogSyncFailed(_logger, error, userId);
+            }
+        }
+
+        int failed = results.Count(r => !r.Success);
+        if (failed > 0)
+        {
+            _logger.LogWarning("ABS inbound sync completed with {FailedCount} user(s) failed", failed);
         }
 
         progress.Report(100);

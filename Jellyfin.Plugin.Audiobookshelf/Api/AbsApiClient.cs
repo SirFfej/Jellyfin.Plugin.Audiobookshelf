@@ -266,22 +266,36 @@ public class AbsApiClient
 
     private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct) where T : class
     {
-        try
+        const int maxRetries = 3;
+        Exception? lastException = null;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            return await _http
-                .GetFromJsonAsync<T>(relativeUrl, JsonOptions, ct)
-                .ConfigureAwait(false);
+            try
+            {
+                return await _http
+                    .GetFromJsonAsync<T>(relativeUrl, JsonOptions, ct)
+                    .ConfigureAwait(false);
+            }
+            catch (HttpRequestException ex) when (attempt < maxRetries - 1)
+            {
+                lastException = ex;
+                int delayMs = 100 * (1 << attempt);
+                await Task.Delay(delayMs, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "ABS request error: GET {Url}", relativeUrl);
+                return null;
+            }
         }
-        catch (HttpRequestException ex)
+
+        if (lastException is not null)
         {
-            _logger.LogWarning(ex, "ABS HTTP request failed: GET {Url}", relativeUrl);
-            return null;
+            _logger.LogWarning(lastException, "ABS HTTP request failed after {MaxRetries} retries: GET {Url}", maxRetries, relativeUrl);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogWarning(ex, "ABS request error: GET {Url}", relativeUrl);
-            return null;
-        }
+
+        return null;
     }
 }
 

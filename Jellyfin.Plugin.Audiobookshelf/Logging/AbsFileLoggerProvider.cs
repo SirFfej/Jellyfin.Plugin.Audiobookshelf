@@ -109,10 +109,10 @@ public sealed class AbsFileLoggerProvider : ILoggerProvider
                 if (today != currentDay)
                 {
                     writer?.Dispose();
-                    string path = Path.Combine(_logDirectory, string.Format(null, FileNamePattern, DateTime.Now));
-                    writer = new StreamWriter(path, append: true, encoding: Encoding.UTF8)
+                    string path = Path.Combine(_logDirectory, string.Format(FileNamePattern, DateTime.Now));
+                    writer = new StreamWriter(path, append: true, encoding: Encoding.UTF8, bufferSize: 4096)
                     {
-                        AutoFlush = true
+                        AutoFlush = false
                     };
                     currentDay = today;
                 }
@@ -122,11 +122,12 @@ public sealed class AbsFileLoggerProvider : ILoggerProvider
         }
         catch (OperationCanceledException)
         {
-            // Shutdown — drain remaining entries
             while (_queue.Reader.TryRead(out var remaining))
             {
                 writer?.WriteLine(remaining);
             }
+
+            writer?.Flush();
         }
         finally
         {
