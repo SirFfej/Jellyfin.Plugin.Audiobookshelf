@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Audiobookshelf Configuration</title>
+</head>
+<body>
+
+<div data-role="page" class="page type-interior withTabs" id="audiobookshelfConfigPage">
+    <div data-role="content">
+        <div class="content-primary">
+
+            <form id="absConfigForm">
+
+                <div class="verticalSection">
+                    <h2 class="sectionTitle">Audiobookshelf — Server Connection</h2>
+                    <p class="fieldDescription">
+                        Connect Jellyfin to your Audiobookshelf server to browse libraries,
+                        play audiobooks, and sync your listening progress.
+                    </p>
+                </div>
+
+                <!-- Server URL -->
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="absServerUrl">Server URL</label>
+                    <input id="absServerUrl"
+                           type="text"
+                           class="emby-input"
+                           placeholder="http://192.168.1.10:13378"
+                           required />
+                    <div class="fieldDescription">
+                        Base URL of your Audiobookshelf server — no trailing slash.
+                        Example: <code>http://192.168.1.10:13378</code> or <code>https://abs.example.com</code>.
+                    </div>
+                </div>
+
+                <!-- Admin API Token -->
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="absAdminToken">Admin API Token</label>
+                    <input id="absAdminToken"
+                           type="password"
+                           class="emby-input"
+                           autocomplete="off"
+                           placeholder="eyJhbGciOiJIUzI1NiIs…" />
+                    <div class="fieldDescription">
+                        ABS API token used for library browsing and metadata.
+                        Generate one in Audiobookshelf under <strong>Settings → Users → your user → API Token</strong>.
+                    </div>
+                </div>
+
+                <!-- Test Connection -->
+                <div style="margin-bottom: 24px;">
+                    <button is="emby-button" type="button" id="absTestConnection" class="raised emby-button">
+                        <span>Test Connection</span>
+                    </button>
+                    <span id="absConnectionStatus" style="margin-left: 12px; color: var(--text-color-secondary);"></span>
+                </div>
+
+                <div class="verticalSection">
+                    <h3 class="sectionTitle">Libraries</h3>
+                    <p class="fieldDescription">
+                        Leave blank to expose all ABS libraries. Enter comma-separated library IDs to restrict.
+                    </p>
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="absLibraryIds">Included Library IDs (optional)</label>
+                    <input id="absLibraryIds"
+                           type="text"
+                           class="emby-input"
+                           placeholder="lib_abc123, lib_def456" />
+                    <div class="fieldDescription" id="absLibraryList" style="margin-top: 8px;"></div>
+                </div>
+
+                <div class="verticalSection">
+                    <h3 class="sectionTitle">Progress Sync</h3>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input type="checkbox" id="absEnableOutbound" class="emby-checkbox" />
+                        <span>Push progress to ABS when playing in Jellyfin</span>
+                    </label>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input type="checkbox" id="absEnableInbound" class="emby-checkbox" />
+                        <span>Pull progress from ABS on schedule</span>
+                    </label>
+                </div>
+
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="absSyncInterval">Sync interval (minutes)</label>
+                    <input id="absSyncInterval"
+                           type="number"
+                           class="emby-input"
+                           min="1"
+                           max="1440"
+                           value="10" />
+                </div>
+
+                <div class="verticalSection">
+                    <h3 class="sectionTitle">Metadata Provider</h3>
+                    <p class="fieldDescription">
+                        Disable this when using the channel mode exclusively to avoid books appearing twice.
+                    </p>
+                </div>
+
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input type="checkbox" id="absEnableMetadata" class="emby-checkbox" />
+                        <span>Enable metadata provider (enriches locally-scanned books)</span>
+                    </label>
+                </div>
+
+                <div class="verticalSection">
+                    <h3 class="sectionTitle">Per-User ABS Tokens</h3>
+                    <p class="fieldDescription">
+                        Map each Jellyfin user to their own ABS API token so progress is tracked per-user.
+                        Leave blank to use the admin token for all users.
+                    </p>
+                </div>
+
+                <div id="absUserTokenList" style="margin-bottom: 24px;">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <div>
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                        <span>Save</span>
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+(function () {
+    'use strict';
+
+    const pageId = 'audiobookshelfConfigPage';
+
+    function loadConfig(page) {
+        ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
+            page.querySelector('#absServerUrl').value = config.AbsServerUrl || '';
+            page.querySelector('#absAdminToken').value = config.AdminApiToken || '';
+            page.querySelector('#absLibraryIds').value = (config.IncludedLibraryIds || []).join(', ');
+            page.querySelector('#absSyncInterval').value = config.ProgressSyncIntervalMinutes || 10;
+            page.querySelector('#absEnableOutbound').checked = config.EnableOutboundSync !== false;
+            page.querySelector('#absEnableInbound').checked = config.EnableInboundSync !== false;
+            page.querySelector('#absEnableMetadata').checked = config.EnableMetadataProvider !== false;
+            renderUserTokenTable(page, config.UserTokenMap || {});
+        });
+    }
+
+    function renderUserTokenTable(page, tokenMap) {
+        const container = page.querySelector('#absUserTokenList');
+        ApiClient.getUsers().then(function (users) {
+            let html = '<table class="detailTable" style="width:100%"><thead><tr>' +
+                '<th>Jellyfin User</th><th>ABS API Token</th></tr></thead><tbody>';
+            users.forEach(function (user) {
+                const token = tokenMap[user.Id] || '';
+                html += '<tr>' +
+                    '<td>' + user.Name + '</td>' +
+                    '<td><input type="password" class="emby-input abs-user-token" autocomplete="off" ' +
+                    'data-userid="' + user.Id + '" value="' + token + '" style="width:100%"/></td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        });
+    }
+
+    function saveConfig(page) {
+        ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
+            config.AbsServerUrl = page.querySelector('#absServerUrl').value.replace(/\/$/, '');
+            config.AdminApiToken = page.querySelector('#absAdminToken').value;
+            const libIds = page.querySelector('#absLibraryIds').value;
+            config.IncludedLibraryIds = libIds
+                ? libIds.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+                : [];
+            config.ProgressSyncIntervalMinutes = parseInt(page.querySelector('#absSyncInterval').value, 10) || 10;
+            config.EnableOutboundSync = page.querySelector('#absEnableOutbound').checked;
+            config.EnableInboundSync = page.querySelector('#absEnableInbound').checked;
+            config.EnableMetadataProvider = page.querySelector('#absEnableMetadata').checked;
+
+            const tokenInputs = page.querySelectorAll('.abs-user-token');
+            const tokenMap = {};
+            tokenInputs.forEach(function (input) {
+                if (input.value) {
+                    tokenMap[input.dataset.userid] = input.value;
+                }
+            });
+            config.UserTokenMap = tokenMap;
+
+            ApiClient.updatePluginConfiguration(Plugin.Instance.Id, config).then(function () {
+                Dashboard.processPluginConfigurationUpdateResult();
+            });
+        });
+    }
+
+    function testConnection(page) {
+        const url = page.querySelector('#absServerUrl').value.replace(/\/$/, '');
+        const token = page.querySelector('#absAdminToken').value;
+        const status = page.querySelector('#absConnectionStatus');
+        status.textContent = 'Testing…';
+
+        fetch(url + '/api/me', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            status.style.color = 'var(--success-color, green)';
+            status.textContent = '✓ Connected as ' + (data.username || 'unknown');
+        })
+        .catch(function () {
+            status.style.color = 'var(--error-color, red)';
+            status.textContent = '✗ Connection failed — check URL and token';
+        });
+    }
+
+    document.addEventListener('viewshow', function (e) {
+        const page = e.detail.getAttribute ? e.detail : document.querySelector('#' + pageId);
+        if (!page) return;
+
+        loadConfig(page);
+
+        page.querySelector('#absTestConnection').addEventListener('click', function () {
+            testConnection(page);
+        });
+
+        page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
+            ev.preventDefault();
+            saveConfig(page);
+        });
+    });
+}());
+</script>
+
+</body>
+</html>

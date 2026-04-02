@@ -1,0 +1,753 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Jellyfin.Plugin.Audiobookshelf</name>
+    </assembly>
+    <members>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient">
+            <summary>
+            Thin HTTP wrapper around the Audiobookshelf REST API.
+            One instance per ABS API token — obtain instances via <see cref="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory"/>.
+            </summary>
+        </member>
+        <member name="F:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.HttpClientName">
+            <summary>Named client key registered with <see cref="T:System.Net.Http.IHttpClientFactory"/>.</summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.#ctor(System.Net.Http.HttpClient,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient},System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient"/> class.
+            </summary>
+            <param name="httpClient">Pre-configured named HTTP client.</param>
+            <param name="cache">Shared memory cache.</param>
+            <param name="logger">Logger.</param>
+            <param name="baseUrl">ABS server base URL (no trailing slash).</param>
+            <param name="token">ABS API bearer token for this client instance.</param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetLibrariesAsync(System.Threading.CancellationToken)">
+            <summary>
+            Returns all ABS libraries the token has access to. Cached for 5 minutes.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetLibraryItemsAsync(System.String,System.Int32,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Returns a page of items from a library. Cached per (libraryId, page, limit) for 5 minutes.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetItemAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns full detail for a single library item. Cached for 5 minutes.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetProgressAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Returns the current user's listening progress for a library item.
+            Not cached — always fetches fresh data.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.UpdateProgressAsync(System.String,System.Double,System.Double,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Updates the current user's listening progress for a library item.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.StartPlaybackSessionAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Starts an ABS playback session and returns the session data including audio track URLs.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.SyncSessionAsync(System.String,System.Double,System.Double,System.Threading.CancellationToken)">
+            <summary>
+            Syncs an open playback session with the current position.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.CloseSessionAsync(System.String,System.Double,System.Double,System.Threading.CancellationToken)">
+            <summary>
+            Closes an open playback session.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetOpenSessionsAsync(System.Threading.CancellationToken)">
+            <summary>
+            Returns all currently open playback sessions (admin only).
+            Used at startup to close orphaned Jellyfin sessions.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetCurrentUserAsync(System.Threading.CancellationToken)">
+            <summary>
+            Returns the ABS user associated with this client's token.
+            Used for connection testing and user validation.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.Token">
+            <summary>Gets the raw ABS API token used by this client (for URL construction).</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsOpenSessionsResponse">
+            <summary>
+            Wrapper for open sessions response from <c>GET /api/sessions/open</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.AbsOpenSessionsResponse.Sessions">
+            <summary>Gets or sets the open sessions.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory">
+            <summary>
+            Creates and caches <see cref="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient"/> instances keyed by API token.
+            </summary>
+            <remarks>
+            Token-scoped clients are cached so we don't recreate the underlying <see cref="T:System.Net.Http.HttpClient"/>
+            on every request.  The cache is cleared when the plugin configuration changes.
+            </remarks>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory.#ctor(System.Net.Http.IHttpClientFactory,Microsoft.Extensions.Caching.Memory.IMemoryCache,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory"/> class.
+            </summary>
+            <param name="httpClientFactory">Factory for creating named HTTP clients.</param>
+            <param name="memoryCache">Shared memory cache passed to each client.</param>
+            <param name="clientLogger">Logger passed to each created client.</param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory.GetClientForToken(System.String)">
+            <summary>
+            Returns a client configured for the given token, creating one if necessary.
+            </summary>
+            <param name="token">ABS API bearer token.</param>
+            <returns>A configured <see cref="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient"/>.</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory.GetAdminClient">
+            <summary>
+            Returns a client using the configured admin API token.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory.GetClientForUser(System.String)">
+            <summary>
+            Returns the best available client for a Jellyfin user ID:
+            the per-user token if configured, otherwise the admin token.
+            </summary>
+            <param name="jellyfinUserId">Jellyfin user GUID as string.</param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory.InvalidateAll">
+            <summary>
+            Clears all cached client instances (e.g. after a configuration change).
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFile">
+            <summary>
+            Represents a raw audio file stored in an ABS library item.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFile.Ino">
+            <summary>Gets or sets the inode identifier used in file URLs.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFile.Metadata">
+            <summary>Gets or sets the metadata of this file.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFile.Index">
+            <summary>Gets or sets the track index within the book.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFile.Codec">
+            <summary>Gets or sets the audio codec, e.g. <c>"mp3"</c>.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFile.Duration">
+            <summary>Gets or sets the duration of this file in seconds.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFileMetadata">
+            <summary>File-level metadata for an audio file.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFileMetadata.Filename">
+            <summary>Gets or sets the file name (with extension).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioFileMetadata.Ext">
+            <summary>Gets or sets the file extension including the dot, e.g. <c>".mp3"</c>.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioTrack">
+            <summary>
+            A playable audio track returned inside a playback session or expanded library item.
+            Each track corresponds to one audio file in a multi-file audiobook.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioTrack.Index">
+            <summary>Gets or sets the index within the book (1-based).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioTrack.Duration">
+            <summary>Gets or sets the track duration in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioTrack.StartOffset">
+            <summary>
+            Gets or sets the start offset of this track within the full book timeline, in seconds.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioTrack.ContentUrl">
+            <summary>
+            Gets or sets the relative content URL, e.g. <c>/api/items/:id/file/:ino</c>.
+            Append <c>?token=&lt;absToken&gt;</c> before passing to Jellyfin.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioTrack.Title">
+            <summary>Gets or sets the track title.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioTrack.MimeType">
+            <summary>Gets or sets the MIME type, e.g. <c>"audio/mpeg"</c>.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAudioTrack.Codec">
+            <summary>Gets or sets the codec string, e.g. <c>"mp3"</c> or <c>"aac"</c>.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAuthorMinified">
+            <summary>
+            A minified author reference embedded in book metadata.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAuthorMinified.Id">
+            <summary>Gets or sets the author UUID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAuthorMinified.Name">
+            <summary>Gets or sets the author's full name.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAuthor">
+            <summary>
+            Full author detail returned by <c>GET /api/authors/:id</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAuthor.Description">
+            <summary>Gets or sets the author biography.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAuthor.Asin">
+            <summary>Gets or sets the ASIN for the author page.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsAuthor.ImagePath">
+            <summary>Gets or sets the path to the author's image on the ABS host.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook">
+            <summary>
+            The media object of an ABS book-type library item.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook.Id">
+            <summary>Gets or sets the book UUID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook.Metadata">
+            <summary>Gets or sets the rich metadata for this book.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook.CoverPath">
+            <summary>Gets or sets the path to the cover image on the ABS host (may be null if no cover).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook.Tags">
+            <summary>Gets or sets the user-defined tags.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook.AudioFiles">
+            <summary>Gets or sets the raw audio files in this book.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook.Chapters">
+            <summary>Gets or sets the chapter list (full book timeline, all files merged).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook.Duration">
+            <summary>Gets or sets the total duration of the audiobook in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBook.Tracks">
+            <summary>
+            Gets or sets the playable audio tracks (populated when <c>?expanded=1</c> is used or
+            returned by <c>POST /api/items/:id/play</c>).
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata">
+            <summary>
+            Metadata fields for an ABS audiobook.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Title">
+            <summary>Gets or sets the book title.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Subtitle">
+            <summary>Gets or sets the subtitle.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Authors">
+            <summary>Gets or sets the list of authors.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Narrators">
+            <summary>Gets or sets the list of narrator names.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Series">
+            <summary>Gets or sets the series associations (with sequence).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Genres">
+            <summary>Gets or sets the genre list.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.PublishedYear">
+            <summary>
+            Gets or sets the published year as a string (ABS stores it as STRING, not integer).
+            May be null, empty, or non-numeric — always use <c>int.TryParse</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Publisher">
+            <summary>Gets or sets the publisher name.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Description">
+            <summary>Gets or sets the book description (may contain HTML).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Isbn">
+            <summary>Gets or sets the ISBN.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Asin">
+            <summary>Gets or sets the ASIN (Amazon Standard Identification Number).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Language">
+            <summary>Gets or sets the language code.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Explicit">
+            <summary>Gets or sets a value indicating whether the content is explicit.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.Abridged">
+            <summary>Gets or sets a value indicating whether this is an abridged edition.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.AuthorName">
+            <summary>Gets or sets the comma-joined author name string (expanded only).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.NarratorName">
+            <summary>Gets or sets the comma-joined narrator name string (expanded only).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookMetadata.SeriesName">
+            <summary>Gets or sets the series name + sequence string (expanded only).</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsChapter">
+            <summary>
+            A chapter entry within an ABS audiobook.
+            <c>start</c> and <c>end</c> are floating-point seconds relative to the full book timeline.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsChapter.Id">
+            <summary>Gets or sets the chapter index.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsChapter.Start">
+            <summary>Gets or sets the start position in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsChapter.End">
+            <summary>Gets or sets the end position in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsChapter.Title">
+            <summary>Gets or sets the chapter title (may be empty).</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibrary">
+            <summary>
+            An Audiobookshelf library returned by <c>GET /api/libraries</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibrary.Id">
+            <summary>Gets or sets the library UUID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibrary.Name">
+            <summary>Gets or sets the display name.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibrary.MediaType">
+            <summary>Gets or sets the media type: <c>"book"</c> or <c>"podcast"</c>.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibrary.Icon">
+            <summary>Gets or sets the library icon identifier.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibrariesResponse">
+            <summary>
+            Wrapper returned by <c>GET /api/libraries</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibrariesResponse.Libraries">
+            <summary>Gets or sets the list of libraries.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem">
+            <summary>
+            A library item (book or podcast) returned by ABS library and item endpoints.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.Id">
+            <summary>Gets or sets the library item UUID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.Ino">
+            <summary>Gets or sets the inode of the item's folder/file.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.Path">
+            <summary>Gets or sets the absolute file system path on the ABS host.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.RelPath">
+            <summary>Gets or sets the path relative to the library folder.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.MediaType">
+            <summary>Gets or sets the media type: <c>"book"</c> or <c>"podcast"</c>.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.LibraryId">
+            <summary>Gets or sets the library ID this item belongs to.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.Media">
+            <summary>Gets or sets the book media object (present when mediaType is "book").</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.AddedAt">
+            <summary>Gets or sets the Unix epoch milliseconds when the item was added.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.UpdatedAt">
+            <summary>Gets or sets the Unix epoch milliseconds of the last update.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem.IsMissing">
+            <summary>Gets or sets a value indicating whether the item's files are missing from disk.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItemsResponse">
+            <summary>
+            Paged response from <c>GET /api/libraries/:id/items</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItemsResponse.Results">
+            <summary>Gets or sets the items on the current page.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItemsResponse.Total">
+            <summary>Gets or sets the total number of items across all pages.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItemsResponse.Page">
+            <summary>Gets or sets the current page index (0-based).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItemsResponse.Limit">
+            <summary>Gets or sets the page size limit.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress">
+            <summary>
+            A user's listening progress for a library item or podcast episode,
+            returned by <c>GET /api/me/progress/:libraryItemId</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.Id">
+            <summary>Gets or sets the progress UUID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.LibraryItemId">
+            <summary>Gets or sets the library item ID this progress applies to.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.Duration">
+            <summary>Gets or sets the total duration in seconds (from item metadata).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.CurrentTime">
+            <summary>Gets or sets the current playback position in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.Progress">
+            <summary>Gets or sets the fractional progress (0.0–1.0).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.IsFinished">
+            <summary>Gets or sets a value indicating whether the item has been marked as finished.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.LastUpdate">
+            <summary>Gets or sets the Unix epoch milliseconds of the last update.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.FinishedAt">
+            <summary>Gets or sets the Unix epoch milliseconds when the item was finished (null if not finished).</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession">
+            <summary>
+            A playback session returned by <c>POST /api/items/:id/play</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.Id">
+            <summary>Gets or sets the session UUID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.LibraryItemId">
+            <summary>Gets or sets the library item ID being played.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.CurrentTime">
+            <summary>Gets or sets the current playback position in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.Duration">
+            <summary>Gets or sets the total duration in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.AudioTracks">
+            <summary>
+            Gets or sets the audio tracks for this session.
+            Each track has a <c>contentUrl</c> and <c>startOffset</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.Chapters">
+            <summary>Gets or sets the chapters for the full book timeline.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.PlayMethod">
+            <summary>
+            Gets or sets the play method: 0 = DirectPlay, 1 = DirectStream, 2 = Transcode.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.MediaPlayer">
+            <summary>Gets or sets the media player identifier sent during session creation.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.DisplayTitle">
+            <summary>Gets or sets the item display title.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.DisplayAuthor">
+            <summary>Gets or sets the item display author.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsPlaybackSession.CoverPath">
+            <summary>Gets or sets the cover URL for this session's item.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsSeriesMinified">
+            <summary>
+            A minified series reference embedded in book metadata.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsSeriesMinified.Id">
+            <summary>Gets or sets the series UUID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsSeriesMinified.Name">
+            <summary>Gets or sets the series name.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsSeriesMinified.Sequence">
+            <summary>Gets or sets the book's position within this series (may be "1", "1.5", etc.).</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser">
+            <summary>
+            The current ABS user returned by <c>GET /api/me</c>.
+            Used for connection validation.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Id">
+            <summary>Gets or sets the user UUID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Username">
+            <summary>Gets or sets the username.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Type">
+            <summary>Gets or sets the user type: <c>"root"</c>, <c>"admin"</c>, <c>"user"</c>, or <c>"guest"</c>.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.IsActive">
+            <summary>Gets or sets a value indicating whether the account is active.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration">
+            <summary>
+            Plugin configuration persisted as XML by <see cref="T:MediaBrowser.Common.Plugins.BasePlugin`1"/>.
+            </summary>
+            <remarks>
+            Do NOT add JSON attributes to this class — Jellyfin serialises it with its internal
+            <c>IXmlSerializer</c>, not <c>System.Text.Json</c>.
+            </remarks>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.AbsServerUrl">
+            <summary>
+            Gets or sets the Audiobookshelf server base URL (no trailing slash).
+            Example: <c>http://192.168.1.10:13378</c> or <c>https://abs.example.com</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.AdminApiToken">
+            <summary>
+            Gets or sets the admin-level ABS API token used for metadata and library browsing
+            when no per-user token is configured.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.UserTokenMap">
+            <summary>
+            Gets or sets the per-user ABS API token map.
+            Key: Jellyfin user ID (GUID string). Value: ABS API token (JWT).
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.IncludedLibraryIds">
+            <summary>
+            Gets or sets the ABS library IDs to expose in Jellyfin.
+            Empty list means all libraries are included.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.ProgressSyncIntervalMinutes">
+            <summary>
+            Gets or sets how often (in minutes) the inbound progress sync task runs.
+            Default: 10 minutes.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.EnableOutboundSync">
+            <summary>
+            Gets or sets a value indicating whether to push Jellyfin playback progress to ABS.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.EnableInboundSync">
+            <summary>
+            Gets or sets a value indicating whether to pull ABS progress into Jellyfin on schedule.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.EnableMetadataProvider">
+            <summary>
+            Gets or sets a value indicating whether the metadata provider path is active.
+            Disable when using the channel path exclusively to avoid double-display.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.TitleMatchConfidenceThreshold">
+            <summary>
+            Gets or sets the minimum title + author match score (0.0–1.0) required to accept a
+            fuzzy match in the metadata provider's fallback matching logic.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.NormalizedServerUrl">
+            <summary>
+            Returns the server URL with no trailing slash, safe for URL construction.
+            </summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Helpers.ItemMatcher">
+            <summary>
+            Matches a Jellyfin item to an ABS library item using a prioritised cascade.
+            Used by the metadata provider when enriching locally-scanned audiobooks.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Helpers.ItemMatcher.FindBestMatch(System.String,System.String,System.String,System.String,System.String,System.Collections.Generic.IReadOnlyList{Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsLibraryItem},System.Double)">
+            <summary>
+            Finds the best matching ABS item for the given search parameters.
+            Returns <c>null</c> if no confident match is found.
+            </summary>
+            <param name="asin">ASIN from Jellyfin provider IDs (may be null).</param>
+            <param name="isbn">ISBN from Jellyfin provider IDs (may be null).</param>
+            <param name="filePath">Absolute file path of the Jellyfin item (may be null).</param>
+            <param name="title">Item title (used for fuzzy fallback).</param>
+            <param name="authorName">Author name (used for fuzzy fallback).</param>
+            <param name="absItems">Candidate ABS items to search.</param>
+            <param name="confidenceThreshold">Minimum fuzzy score (0–1) to accept a title+author match.</param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Helpers.ItemMatcher.FuzzyScorePublic(System.String,System.String)">
+            <summary>Public wrapper for use by search result scoring outside this class.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Helpers.TimeHelper">
+            <summary>
+            Conversion helpers between ABS time units (seconds as double) and
+            Jellyfin time units (ticks as long, where 1 second = 10,000,000 ticks).
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Helpers.TimeHelper.SecondsToTicks(System.Double)">
+            <summary>Converts seconds (ABS) to ticks (Jellyfin).</summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Helpers.TimeHelper.TicksToSeconds(System.Int64)">
+            <summary>Converts ticks (Jellyfin) to seconds (ABS).</summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Helpers.TimeHelper.FromUnixMs(System.Int64)">
+            <summary>Converts Unix epoch milliseconds to a <see cref="T:System.DateTime"/> (UTC).</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Plugin">
+            <summary>
+            The Audiobookshelf Jellyfin plugin entry point.
+            </summary>
+            <remarks>
+            Exposes ABS libraries as a Jellyfin channel, provides metadata/image enrichment
+            for locally-scanned audiobooks, and syncs playback progress bidirectionally.
+            </remarks>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Instance">
+            <summary>
+            Gets the singleton instance of this plugin, set during construction.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Description">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Plugin.#ctor(MediaBrowser.Common.Configuration.IApplicationPaths,MediaBrowser.Model.Serialization.IXmlSerializer)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Plugin"/> class.
+            </summary>
+            <param name="applicationPaths">Jellyfin application path provider.</param>
+            <param name="xmlSerializer">Jellyfin XML serializer used for config persistence.</param>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Plugin.GetPages">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.PluginServiceRegistrator">
+            <summary>
+            Registers the plugin's services with the Jellyfin dependency-injection container.
+            </summary>
+            <remarks>
+            Jellyfin requires this class to have a <b>public parameterless constructor</b> — it is
+            instantiated via reflection before the DI container is built.
+            </remarks>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.PluginServiceRegistrator.RegisterServices(Microsoft.Extensions.DependencyInjection.IServiceCollection,MediaBrowser.Controller.IServerApplicationHost)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider">
+            <summary>
+            Enriches locally-scanned Jellyfin audiobooks with metadata from Audiobookshelf.
+            </summary>
+            <remarks>
+            Only active when <see cref="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.EnableMetadataProvider"/> is <c>true</c>.
+            Disable this when using the channel mode exclusively to avoid items appearing twice.
+            </remarks>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider"/> class.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider.Name">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider.GetSearchResults(MediaBrowser.Controller.Providers.BookInfo,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider.GetMetadata(MediaBrowser.Controller.Providers.BookInfo,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsBookMetadataProvider.GetImageResponse(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider">
+            <summary>
+            Provides cover art for audiobooks from Audiobookshelf.
+            </summary>
+            <remarks>
+            The ABS cover endpoint (<c>/api/items/:id/cover</c>) does not require authentication,
+            so the image URL can be passed directly to Jellyfin without embedding a token.
+            </remarks>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider"/> class.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.Name">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.Supports(MediaBrowser.Controller.Entities.BaseItem)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.GetSupportedImages(MediaBrowser.Controller.Entities.BaseItem)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.GetImages(MediaBrowser.Controller.Entities.BaseItem,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Providers.AbsImageProvider.GetImageResponse(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask">
+            <summary>
+            Scheduled task that pulls ABS listening progress into Jellyfin for all mapped users.
+            Uses "last-write-wins" based on the ABS <c>lastUpdate</c> timestamp.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,MediaBrowser.Controller.Library.IUserDataManager,MediaBrowser.Controller.Library.IUserManager,MediaBrowser.Controller.Library.ILibraryManager,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask"/> class.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask.Key">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask.Category">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask.ExecuteAsync(System.IProgress{System.Double},System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.InboundSyncTask.GetDefaultTriggers">
+            <inheritdoc />
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Sync.ProgressSyncService">
+            <summary>
+            Pushes Jellyfin playback progress to Audiobookshelf in real time.
+            Subscribes to <see cref="E:MediaBrowser.Controller.Library.IUserDataManager.UserDataSaved"/> and debounces
+            updates per-item (10 s) to avoid hammering the ABS server.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.ProgressSyncService.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,MediaBrowser.Controller.Library.IUserDataManager,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Sync.ProgressSyncService})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Sync.ProgressSyncService"/> class.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.ProgressSyncService.Dispose">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>

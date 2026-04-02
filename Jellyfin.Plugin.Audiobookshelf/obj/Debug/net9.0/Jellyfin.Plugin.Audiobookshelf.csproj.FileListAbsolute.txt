@@ -1,0 +1,14 @@
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.csproj.AssemblyReference.cache
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.AssemblyInfoInputs.cache
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.AssemblyInfo.cs
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.csproj.CoreCompileInputs.cache
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\bin\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.deps.json
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\bin\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.dll
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\bin\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.pdb
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\bin\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.xml
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.dll
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\refint\Jellyfin.Plugin.Audiobookshelf.dll
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.xml
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\Jellyfin.Plugin.Audiobookshelf.pdb
+C:\Users\SirFfej\CodeEtAl\Jellyfin.Plugin.Audiobookshelf\Jellyfin.Plugin.Audiobookshelf\obj\Debug\net9.0\ref\Jellyfin.Plugin.Audiobookshelf.dll

@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>Jellyfin.Plugin.Audiobookshelf</AssemblyName>
+    <RootNamespace>Jellyfin.Plugin.Audiobookshelf</RootNamespace>
+    <Version>1.0.0.0</Version>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- Plugin GUID — read by BasePlugin<T> via reflection to set the plugin Id -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.InteropServices.GuidAttribute">
+      <_Parameter1>7B2F4A1D-E3C0-4E8B-9D5A-3F7C6B2E0A14</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Jellyfin contracts — ExcludeAssets=runtime is REQUIRED.
+      Without it, Jellyfin's own assemblies are copied into the plugin output folder.
+      When the plugin loader then finds two copies of the same assembly in different
+      load contexts, registration fails silently.
+    -->
+    <PackageReference Include="Jellyfin.Controller" Version="10.10.7">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+    <PackageReference Include="Jellyfin.Model" Version="10.10.7">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+
+    <!--
+      Microsoft.Extensions.* packages are NOT excluded — the Jellyfin plugin load
+      context does not expose these to plugins, so they must ship with the DLL.
+    -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
+  </ItemGroup>
+
+  <!-- ASP.NET Core types provided by the host at runtime -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Embed the admin configuration HTML page as a resource -->
+  <ItemGroup>
+    <EmbeddedResource Include="Configuration\configPage.html" />
+  </ItemGroup>
+
+</Project>
