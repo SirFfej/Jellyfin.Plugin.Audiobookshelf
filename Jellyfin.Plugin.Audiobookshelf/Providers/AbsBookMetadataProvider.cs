@@ -227,9 +227,17 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
         var libraries = await client.GetLibrariesAsync(ct).ConfigureAwait(false);
         var config = Plugin.Instance!.Configuration;
 
-        var included = config.IncludedLibraryIds.Count > 0
-            ? libraries.Where(l => config.IncludedLibraryIds.Contains(l.Id))
-            : libraries.Where(l => l.MediaType == "book");
+        IEnumerable<AbsLibrary> included;
+        if (config.IncludedLibraryIds.Count > 0)
+        {
+            included = libraries.Where(l => config.IncludedLibraryIds.Contains(l.Id));
+        }
+        else
+        {
+            included = config.EnablePodcastLibraries
+                ? libraries.Where(l => l.MediaType == "book" || l.MediaType == "podcast")
+                : libraries.Where(l => l.MediaType == "book");
+        }
 
         var all = new List<AbsLibraryItem>();
         foreach (var lib in included)
@@ -238,7 +246,10 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
             while (true)
             {
                 var response = await client.GetLibraryItemsAsync(lib.Id, page, 100, ct).ConfigureAwait(false);
-                all.AddRange(response.Results.Where(i => !i.IsMissing));
+                // Always filter to book items here — podcast metadata enrichment requires
+                // a dedicated provider not yet implemented. This prevents podcast items from
+                // polluting book matching when a podcast library is included.
+                all.AddRange(response.Results.Where(i => !i.IsMissing && i.MediaType == "book"));
                 if (all.Count >= response.Total || response.Results.Length == 0)
                 {
                     break;
