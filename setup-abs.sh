@@ -46,6 +46,7 @@ fi
 
 # ── 2. Extract Jellyfin media volume mounts ───────────────────────────────────
 AUDIOBOOK_PATHS=()
+PODCAST_PATHS=()
 OTHER_MEDIA_PATHS=()
 JELLYFIN_NETWORK=""
 JELLYFIN_UID=""
@@ -78,6 +79,9 @@ if [[ "$JELLYFIN_FOUND" == "true" ]]; then
     if echo "$host_path $container_path" | grep -qiE '(audiobook|audio.?book|abs)'; then
       AUDIOBOOK_PATHS+=("$host_path")
       ok "  Audiobook dir: $host_path"
+    elif echo "$host_path $container_path" | grep -qiE '(podcast)'; then
+      PODCAST_PATHS+=("$host_path")
+      ok "  Podcast dir: $host_path"
     else
       OTHER_MEDIA_PATHS+=("$host_path")
       info "  Other media dir: $host_path (will be mounted read-only for browsing)"
@@ -94,10 +98,13 @@ if [[ "$JELLYFIN_FOUND" == "true" ]]; then
     # skip if already captured via Binds
     if echo "$dst $src" | grep -qiE '(config|cache|log|transcode|metadata)'; then continue; fi
     if [[ ! -e "$src" ]]; then continue; fi
-    if echo "${AUDIOBOOK_PATHS[*]-} ${OTHER_MEDIA_PATHS[*]-}" | grep -q "$src"; then continue; fi
+    if echo "${AUDIOBOOK_PATHS[*]-} ${PODCAST_PATHS[*]-} ${OTHER_MEDIA_PATHS[*]-}" | grep -q "$src"; then continue; fi
     if echo "$src $dst" | grep -qiE '(audiobook|audio.?book|abs)'; then
       AUDIOBOOK_PATHS+=("$src")
       ok "  Audiobook dir (mount): $src"
+    elif echo "$src $dst" | grep -qiE '(podcast)'; then
+      PODCAST_PATHS+=("$src")
+      ok "  Podcast dir (mount): $src"
     elif [[ "$src" == /* ]]; then
       OTHER_MEDIA_PATHS+=("$src")
       info "  Other media dir (mount): $src"
@@ -128,7 +135,7 @@ fi
 # ── 3. Prompt for any missing paths ──────────────────────────────────────────
 if [[ ${#AUDIOBOOK_PATHS[@]} -eq 0 ]]; then
   # Before giving up, scan one level of subdirectories in OTHER_MEDIA_PATHS for
-  # audiobook-named folders (e.g. /mnt/media/Books → /mnt/media/Books/Audiobooks)
+  # audiobook- or podcast-named folders (e.g. /mnt/media/Books → /mnt/media/Books/Audiobooks)
   if [[ ${#OTHER_MEDIA_PATHS[@]} -gt 0 ]]; then
     for p in "${OTHER_MEDIA_PATHS[@]}"; do
       while IFS= read -r subdir; do
@@ -137,6 +144,9 @@ if [[ ${#AUDIOBOOK_PATHS[@]} -eq 0 ]]; then
         if echo "$subname" | grep -qiE '(audiobook|audio.?book|abs)'; then
           AUDIOBOOK_PATHS+=("$subdir")
           ok "  Audiobook dir (subdir): $subdir"
+        elif echo "$subname" | grep -qiE '(podcast)'; then
+          PODCAST_PATHS+=("$subdir")
+          ok "  Podcast dir (subdir): $subdir"
         fi
       done < <(find "$p" -maxdepth 1 -mindepth 1 -type d 2>/dev/null || true)
     done
@@ -223,6 +233,17 @@ build_volumes() {
     idx=$((idx+1))
   done
 
+  # Podcast directories — full read/write so ABS can download episodes and write metadata
+  idx=0
+  for p in "${PODCAST_PATHS[@]}"; do
+    if [[ $idx -eq 0 ]]; then
+      echo "${indent}- ${p}:/podcasts"
+    else
+      echo "${indent}- ${p}:/podcasts${idx}"
+    fi
+    idx=$((idx+1))
+  done
+
   # Other media directories from Jellyfin — read-only
   for p in "${OTHER_MEDIA_PATHS[@]}"; do
     local dirname
@@ -294,6 +315,9 @@ echo "  Metadata dir: $ABS_METADATA"
 echo "  Port        : $ABS_PORT → container:80"
 if [[ ${#AUDIOBOOK_PATHS[@]} -gt 0 ]]; then
   echo "  Audiobooks  : ${AUDIOBOOK_PATHS[*]}"
+fi
+if [[ ${#PODCAST_PATHS[@]} -gt 0 ]]; then
+  echo "  Podcasts    : ${PODCAST_PATHS[*]}"
 fi
 if [[ ${#OTHER_MEDIA_PATHS[@]} -gt 0 ]]; then
   echo "  Other media : ${OTHER_MEDIA_PATHS[*]} (read-only)"
