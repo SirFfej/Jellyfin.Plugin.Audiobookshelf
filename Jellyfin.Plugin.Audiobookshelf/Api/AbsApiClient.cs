@@ -261,27 +261,52 @@ public class AbsApiClient
     public string Token => _token;
 
     // -------------------------------------------------------------------------
+    // User management (admin only)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Returns all users from the ABS server (admin only).
+    /// Each user includes their API token.
+    /// </summary>
+    public async Task<AbsAllUsersResponse?> GetAllUsersAsync(CancellationToken ct = default)
+        => await GetAsync<AbsAllUsersResponse>("api/users", ct).ConfigureAwait(false);
+
+    // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
 
     private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct) where T : class
     {
-        try
+        const int maxRetries = 3;
+        Exception? lastException = null;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            return await _http
-                .GetFromJsonAsync<T>(relativeUrl, JsonOptions, ct)
-                .ConfigureAwait(false);
+            try
+            {
+                return await _http
+                    .GetFromJsonAsync<T>(relativeUrl, JsonOptions, ct)
+                    .ConfigureAwait(false);
+            }
+            catch (HttpRequestException ex) when (attempt < maxRetries - 1)
+            {
+                lastException = ex;
+                int delayMs = 100 * (1 << attempt);
+                await Task.Delay(delayMs, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "ABS request error: GET {Url}", relativeUrl);
+                return null;
+            }
         }
-        catch (HttpRequestException ex)
+
+        if (lastException is not null)
         {
-            _logger.LogWarning(ex, "ABS HTTP request failed: GET {Url}", relativeUrl);
-            return null;
+            _logger.LogWarning(lastException, "ABS HTTP request failed after {MaxRetries} retries: GET {Url}", maxRetries, relativeUrl);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogWarning(ex, "ABS request error: GET {Url}", relativeUrl);
-            return null;
-        }
+
+        return null;
     }
 }
 
@@ -293,4 +318,14 @@ public class AbsOpenSessionsResponse
     /// <summary>Gets or sets the open sessions.</summary>
     [JsonPropertyName("sessions")]
     public AbsPlaybackSession[] Sessions { get; set; } = [];
+}
+
+/// <summary>
+/// Wrapper for all users response from <c>GET /api/users</c>.
+/// </summary>
+public class AbsAllUsersResponse
+{
+    /// <summary>Gets or sets the list of all users.</summary>
+    [JsonPropertyName("users")]
+    public AbsUser[] Users { get; set; } = [];
 }

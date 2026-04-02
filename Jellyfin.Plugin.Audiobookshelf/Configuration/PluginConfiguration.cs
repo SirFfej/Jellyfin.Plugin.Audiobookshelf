@@ -68,4 +68,5 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Returns the server URL with no trailing slash, safe for URL construction.
     /// </summary>
     public string NormalizedServerUrl => AbsServerUrl.TrimEnd('/');
+
 }

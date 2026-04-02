@@ -3,6 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <title>Audiobookshelf Configuration</title>
+    <style>
+        .user-match-card {
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-match-card.matched {
+            background-color: var(--accent-color-translucent, rgba(0,128,0,0.1));
+        }
+        .user-match-card.unmatched {
+            background-color: var(--warning-color-translucent, rgba(255,165,0,0.1));
+        }
+        .match-icon {
+            font-size: 24px;
+        }
+        .match-info {
+            flex: 1;
+        }
+        .match-type {
+            font-size: 12px;
+            color: var(--text-secondary, #666);
+        }
+        .fallback-warning {
+            background-color: var(--warning-color-translucent, rgba(255,165,0,0.2));
+            border: 1px solid var(--warning-color, #ffa500);
+            border-radius: 4px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+        #userDiscoverySection {
+            display: none;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border-color, #ddd);
+            border-top-color: var(--accent-color, #00a0dc);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
 
@@ -115,15 +164,40 @@
                 </div>
 
                 <div class="verticalSection">
-                    <h3 class="sectionTitle">Per-User ABS Tokens</h3>
+                    <h3 class="sectionTitle">User Mapping</h3>
                     <p class="fieldDescription">
-                        Map each Jellyfin user to their own ABS API token so progress is tracked per-user.
-                        Leave blank to use the admin token for all users.
+                        Link Jellyfin users to their Audiobookshelf accounts for per-user progress tracking.
+                        The admin API token is required to discover ABS users.
                     </p>
                 </div>
 
-                <div id="absUserTokenList" style="margin-bottom: 24px;">
-                    <!-- Populated dynamically -->
+                <div id="userDiscoverySection">
+                    <div id="keyringWarning" class="fallback-warning" style="display: none;">
+                        <strong>System Keyring Unavailable</strong>
+                        <p>API tokens cannot be stored securely. Do you want to store them in the plugin configuration instead?</p>
+                        <p style="color: var(--warning-color, #ffa500);">Warning: Tokens will be stored in plain text in the plugin configuration file.</p>
+                        <button is="emby-button" type="button" id="approveFallback" class="raised emby-button">
+                            <span>Accept & Continue</span>
+                        </button>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <button is="emby-button" type="button" id="discoverUsers" class="raised emby-button">
+                            <span>Discover Users</span>
+                        </button>
+                        <span id="discoverStatus" style="margin-left: 12px; color: var(--text-color-secondary);"></span>
+                    </div>
+
+                    <div id="userMatchesList"></div>
+                </div>
+
+                <div id="userTokenSection">
+                    <p class="fieldDescription">
+                        Or manually enter per-user ABS tokens below:
+                    </p>
+                    <div id="absUserTokenList" style="margin-bottom: 24px;">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
 
                 <div>
@@ -143,6 +217,9 @@
     'use strict';
 
     const pageId = 'audiobookshelfConfigPage';
+    let keyringAvailable = true;
+    let requiresConfirmation = false;
+    let userMatches = [];
 
     function loadConfig(page) {
         ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
@@ -172,6 +249,222 @@
             });
             html += '</tbody></table>';
             container.innerHTML = html;
+        });
+    }
+
+    function checkKeyringStatus(page) {
+        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/KeyringStatus'), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            keyringAvailable = data.IsKeyringAvailable;
+            requiresConfirmation = data.RequiresUserConfirmation;
+
+            const section = page.querySelector('#userDiscoverySection');
+            const warning = page.querySelector('#keyringWarning');
+            const tokenSection = page.querySelector('#userTokenSection');
+
+            section.style.display = 'block';
+
+            if (!keyringAvailable && data.UsePluginConfigFallback) {
+                warning.style.display = 'none';
+                tokenSection.style.display = 'block';
+            } else if (!keyringAvailable) {
+                warning.style.display = 'block';
+                tokenSection.style.display = 'none';
+            } else {
+                warning.style.display = 'none';
+                tokenSection.style.display = 'block';
+            }
+        })
+        .catch(function (err) {
+            console.error('Failed to check keyring status:', err);
+            page.querySelector('#userDiscoverySection').style.display = 'block';
+        });
+    }
+
+    function approveFallback(page) {
+        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/ApproveFallback'), {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            page.querySelector('#keyringWarning').style.display = 'none';
+            page.querySelector('#userTokenSection').style.display = 'block';
+            requiresConfirmation = false;
+        })
+        .catch(function (err) {
+            console.error('Failed to approve fallback:', err);
+        });
+    }
+
+    function discoverUsers(page) {
+        const url = page.querySelector('#absServerUrl').value;
+        const token = page.querySelector('#absAdminToken').value;
+        const status = page.querySelector('#discoverStatus');
+
+        if (!url || !token) {
+            status.textContent = 'Server URL and Admin Token are required';
+            status.style.color = 'var(--error-color, red)';
+            return;
+        }
+
+        status.innerHTML = '<span class="loading-spinner"></span> Discovering users...';
+        status.style.color = '';
+
+        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/Discover?adminToken=' + encodeURIComponent(token) + '&serverUrl=' + encodeURIComponent(url)), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            userMatches = data.Matches;
+            keyringAvailable = data.IsKeyringAvailable;
+            requiresConfirmation = data.RequiresUserConfirmation;
+            renderUserMatches(page, data.Matches);
+            status.textContent = 'Found ' + data.Matches.length + ' user(s)';
+            status.style.color = 'var(--success-color, green)';
+        })
+        .catch(function (err) {
+            console.error('Failed to discover users:', err);
+            status.textContent = 'Discovery failed';
+            status.style.color = 'var(--error-color, red)';
+        });
+    }
+
+    function renderUserMatches(page, matches) {
+        const container = page.querySelector('#userMatchesList');
+        let html = '';
+
+        matches.forEach(function (match, index) {
+            const cardClass = match.MatchType === 'exact' ? 'matched' : 'unmatched';
+            const icon = match.MatchType === 'exact' ? '✓' : match.MatchType === 'fuzzy' ? '?' : '✗';
+            const matchTypeText = match.MatchType === 'exact' ? 'Exact match' : match.MatchType === 'fuzzy' ? 'Possible match' : 'No match';
+
+            html += '<div class="user-match-card ' + cardClass + '">';
+            html += '<span class="match-icon">' + icon + '</span>';
+            html += '<div class="match-info">';
+            html += '<div><strong>' + (match.JellyfinUsername || 'No Jellyfin user') + '</strong>';
+            if (match.AbsUsername) {
+                html += ' ↔ <strong>' + match.AbsUsername + '</strong>';
+            }
+            html += '</div>';
+            html += '<div class="match-type">' + matchTypeText + '</div>';
+            html += '</div>';
+
+            if (match.JellyfinUserId && match.AbsUserId) {
+                html += '<input type="checkbox" class="emby-checkbox match-checkbox" data-index="' + index + '" ' + (match.IsSelected ? 'checked' : '') + ' />';
+            } else if (match.AbsUserId) {
+                html += '<select class="emby-select match-select" data-abs-id="' + match.AbsUserId + '" data-abs-username="' + match.AbsUsername + '">';
+                html += '<option value="">-- Select Jellyfin User --</option>';
+                html += '</select>';
+            }
+
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+
+        // Populate dropdowns with Jellyfin users
+        const selectElements = container.querySelectorAll('.match-select');
+        selectElements.forEach(function (select) {
+            ApiClient.getUsers().then(function (users) {
+                users.forEach(function (user) {
+                    const option = document.createElement('option');
+                    option.value = user.Id;
+                    option.textContent = user.Name;
+                    select.appendChild(option);
+                });
+            });
+        });
+
+        // Update matches when selection changes
+        container.querySelectorAll('.match-checkbox, .match-select').forEach(function (input) {
+            input.addEventListener('change', function () {
+                const index = parseInt(this.dataset.index);
+                const select = this.closest('.user-match-card').querySelector('.match-select');
+                const checkbox = this.closest('.user-match-card').querySelector('.match-checkbox');
+
+                if (this.classList.contains('match-checkbox')) {
+                    if (index >= 0 && index < userMatches.length) {
+                        userMatches[index].IsSelected = this.checked;
+                    }
+                }
+
+                if (select && select.value) {
+                    const absId = select.dataset.absId;
+                    const absUsername = select.dataset.absUsername;
+                    const jfId = select.value;
+                    const jfUsername = select.options[select.selectedIndex].text;
+
+                    const existingMatch = userMatches.find(m => m.JellyfinUserId === jfId);
+                    if (existingMatch) {
+                        existingMatch.IsSelected = true;
+                    } else {
+                        userMatches.push({
+                            JellyfinUserId: jfId,
+                            JellyfinUsername: jfUsername,
+                            AbsUserId: absId,
+                            AbsUsername: absUsername,
+                            MatchType: 'manual',
+                            IsSelected: true
+                        });
+                    }
+                }
+            });
+        });
+
+        if (matches.length > 0) {
+            html += '<button is="emby-button" type="button" id="saveUserMappings" class="raised emby-button" style="margin-top: 12px;">';
+            html += '<span>Save User Mappings</span>';
+            html += '</button>';
+            container.innerHTML += html;
+
+            container.querySelector('#saveUserMappings').addEventListener('click', function () {
+                saveUserMappings(page);
+            });
+        }
+    }
+
+    function saveUserMappings(page) {
+        const url = page.querySelector('#absServerUrl').value;
+        const token = page.querySelector('#absAdminToken').value;
+        const status = page.querySelector('#discoverStatus');
+
+        status.innerHTML = '<span class="loading-spinner"></span> Saving...';
+        status.style.color = '';
+
+        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/SaveMappings'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ Matches: userMatches.filter(function (m) { return m.IsSelected && m.AbsUserId; }) })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            status.textContent = 'Saved ' + data.SavedCount + ' mapping(s)';
+            status.style.color = 'var(--success-color, green)';
+
+            // Refresh the token table to show newly mapped users
+            ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
+                renderUserTokenTable(page, config.UserTokenMap || {});
+            });
+        })
+        .catch(function (err) {
+            console.error('Failed to save mappings:', err);
+            status.textContent = 'Save failed';
+            status.style.color = 'var(--error-color, red)';
         });
     }
 
@@ -228,6 +521,7 @@
         if (!page) return;
 
         loadConfig(page);
+        checkKeyringStatus(page);
 
         page.querySelector('#absTestConnection').addEventListener('click', function () {
             testConnection(page);
@@ -236,6 +530,14 @@
         page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
             ev.preventDefault();
             saveConfig(page);
+        });
+
+        page.querySelector('#approveFallback')?.addEventListener('click', function () {
+            approveFallback(page);
+        });
+
+        page.querySelector('#discoverUsers')?.addEventListener('click', function () {
+            discoverUsers(page);
         });
     });
 }());
