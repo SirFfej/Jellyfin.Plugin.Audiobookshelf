@@ -1,7 +1,23 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Serialization;
 using MediaBrowser.Model.Plugins;
 
 namespace Jellyfin.Plugin.Audiobookshelf;
+
+/// <summary>
+/// Serializable key-value pair for user→token mappings.
+/// <see cref="Dictionary{TKey,TValue}"/> cannot be XML-serialized by Jellyfin's internal
+/// XmlSerializer because it implements IDictionary.
+/// </summary>
+public class UserTokenEntry
+{
+    /// <summary>Gets or sets the Jellyfin user ID (GUID string).</summary>
+    public string UserId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the ABS API token (JWT).</summary>
+    public string Token { get; set; } = string.Empty;
+}
 
 /// <summary>
 /// Plugin configuration persisted as XML by <see cref="MediaBrowser.Common.Plugins.BasePlugin{T}"/>.
@@ -9,6 +25,8 @@ namespace Jellyfin.Plugin.Audiobookshelf;
 /// <remarks>
 /// Do NOT add JSON attributes to this class — Jellyfin serialises it with its internal
 /// <c>IXmlSerializer</c>, not <c>System.Text.Json</c>.
+/// Do NOT use <see cref="Dictionary{TKey,TValue}"/> — it implements IDictionary and cannot
+/// be XML-serialized. Use <see cref="List{T}"/> of a custom entry class instead.
 /// </remarks>
 public class PluginConfiguration : BasePluginConfiguration
 {
@@ -25,10 +43,18 @@ public class PluginConfiguration : BasePluginConfiguration
     public string AdminApiToken { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the per-user ABS API token map.
-    /// Key: Jellyfin user ID (GUID string). Value: ABS API token (JWT).
+    /// Gets or sets the per-user ABS API token entries (XML-serializable backing store).
+    /// Use <see cref="UserTokenMap"/> for dictionary-style access in code.
     /// </summary>
-    public Dictionary<string, string> UserTokenMap { get; set; } = new();
+    public List<UserTokenEntry> UserTokenEntries { get; set; } = new();
+
+    /// <summary>
+    /// Gets a dictionary view of <see cref="UserTokenEntries"/> for read-only lookup.
+    /// Mutations must go through <see cref="UserTokenEntries"/> directly.
+    /// </summary>
+    [XmlIgnore]
+    public Dictionary<string, string> UserTokenMap =>
+        UserTokenEntries.ToDictionary(e => e.UserId, e => e.Token);
 
     /// <summary>
     /// Gets or sets the ABS library IDs to expose in Jellyfin.

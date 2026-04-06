@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +29,16 @@ public class TokenVault
     /// </summary>
     public Task<bool> StoreTokenAsync(string jellyfinUserId, string absToken)
     {
-        _config.UserTokenMap[jellyfinUserId] = absToken;
+        var existing = _config.UserTokenEntries.FirstOrDefault(e => e.UserId == jellyfinUserId);
+        if (existing != null)
+        {
+            existing.Token = absToken;
+        }
+        else
+        {
+            _config.UserTokenEntries.Add(new UserTokenEntry { UserId = jellyfinUserId, Token = absToken });
+        }
+
         _logger.LogDebug("Stored ABS token for user {UserId}", jellyfinUserId);
         return Task.FromResult(true);
     }
@@ -38,8 +48,8 @@ public class TokenVault
     /// </summary>
     public Task<string?> GetTokenAsync(string jellyfinUserId)
     {
-        return Task.FromResult(
-            _config.UserTokenMap.TryGetValue(jellyfinUserId, out var token) ? token : null);
+        var entry = _config.UserTokenEntries.FirstOrDefault(e => e.UserId == jellyfinUserId);
+        return Task.FromResult(entry?.Token);
     }
 
     /// <summary>
@@ -47,7 +57,7 @@ public class TokenVault
     /// </summary>
     public Task DeleteTokenAsync(string jellyfinUserId)
     {
-        _config.UserTokenMap.Remove(jellyfinUserId);
+        _config.UserTokenEntries.RemoveAll(e => e.UserId == jellyfinUserId);
         _logger.LogDebug("Deleted ABS token for user {UserId}", jellyfinUserId);
         return Task.CompletedTask;
     }

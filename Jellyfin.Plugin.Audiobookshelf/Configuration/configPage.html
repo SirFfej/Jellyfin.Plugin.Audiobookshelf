@@ -69,6 +69,7 @@
                            type="text"
                            class="emby-input"
                            placeholder="http://192.168.1.10:13378"
+                           autocomplete="url"
                            required />
                     <div class="fieldDescription">
                         Base URL of your Audiobookshelf server — no trailing slash.
@@ -82,7 +83,7 @@
                     <input id="absAdminToken"
                            type="password"
                            class="emby-input"
-                           autocomplete="off"
+                           autocomplete="new-password"
                            placeholder="eyJhbGciOiJIUzI1NiIs…" />
                     <div class="fieldDescription">
                         ABS API token used for library browsing and metadata.
@@ -355,14 +356,15 @@
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
+                'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"',
                 'X-Abs-Token': token
             }
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-            userMatches = data.Matches;
-            renderUserMatches(page, data.Matches);
-            status.textContent = 'Found ' + data.Matches.length + ' user(s)';
+            userMatches = data.matches;
+            renderUserMatches(page, data.matches);
+            status.textContent = 'Found ' + data.matches.length + ' user(s)';
             status.style.color = 'var(--success-color, green)';
         })
         .catch(function (err) {
@@ -377,25 +379,25 @@
         let html = '';
 
         matches.forEach(function (match, index) {
-            const cardClass = match.MatchType === 'exact' ? 'matched' : 'unmatched';
-            const icon = match.MatchType === 'exact' ? '✓' : match.MatchType === 'fuzzy' ? '?' : '✗';
-            const matchTypeText = match.MatchType === 'exact' ? 'Exact match' : match.MatchType === 'fuzzy' ? 'Possible match' : 'No match';
+            const cardClass = match.matchType === 'exact' ? 'matched' : 'unmatched';
+            const icon = match.matchType === 'exact' ? '✓' : match.matchType === 'fuzzy' ? '?' : '✗';
+            const matchTypeText = match.matchType === 'exact' ? 'Exact match' : match.matchType === 'fuzzy' ? 'Possible match' : 'No match';
 
             html += '<div class="user-match-card ' + cardClass + '">';
             html += '<span class="match-icon">' + icon + '</span>';
             html += '<div class="match-info">';
-            html += '<div><strong>' + (match.JellyfinUsername || 'No Jellyfin user') + '</strong>';
-            if (match.AbsUsername) {
-                html += ' ↔ <strong>' + match.AbsUsername + '</strong>';
+            html += '<div><strong>' + (match.jellyfinUsername || 'No Jellyfin user') + '</strong>';
+            if (match.absUsername) {
+                html += ' ↔ <strong>' + match.absUsername + '</strong>';
             }
             html += '</div>';
             html += '<div class="match-type">' + matchTypeText + '</div>';
             html += '</div>';
 
-            if (match.JellyfinUserId && match.AbsUserId) {
-                html += '<input type="checkbox" class="emby-checkbox match-checkbox" data-index="' + index + '" ' + (match.IsSelected ? 'checked' : '') + ' />';
-            } else if (match.AbsUserId) {
-                html += '<select class="emby-select match-select" data-abs-id="' + match.AbsUserId + '" data-abs-username="' + match.AbsUsername + '">';
+            if (match.jellyfinUserId && match.absUserId) {
+                html += '<input type="checkbox" class="emby-checkbox match-checkbox" data-index="' + index + '" ' + (match.isSelected ? 'checked' : '') + ' />';
+            } else if (match.absUserId) {
+                html += '<select class="emby-select match-select" data-abs-id="' + match.absUserId + '" data-abs-username="' + match.absUsername + '">';
                 html += '<option value="">-- Select Jellyfin User --</option>';
                 html += '</select>';
             }
@@ -427,7 +429,7 @@
 
                 if (this.classList.contains('match-checkbox')) {
                     if (index >= 0 && index < userMatches.length) {
-                        userMatches[index].IsSelected = this.checked;
+                        userMatches[index].isSelected = this.checked;
                     }
                 }
 
@@ -437,17 +439,17 @@
                     const jfId = select.value;
                     const jfUsername = select.options[select.selectedIndex].text;
 
-                    const existingMatch = userMatches.find(m => m.JellyfinUserId === jfId);
+                    const existingMatch = userMatches.find(m => m.jellyfinUserId === jfId);
                     if (existingMatch) {
-                        existingMatch.IsSelected = true;
+                        existingMatch.isSelected = true;
                     } else {
                         userMatches.push({
-                            JellyfinUserId: jfId,
-                            JellyfinUsername: jfUsername,
-                            AbsUserId: absId,
-                            AbsUsername: absUsername,
-                            MatchType: 'manual',
-                            IsSelected: true
+                            jellyfinUserId: jfId,
+                            jellyfinUsername: jfUsername,
+                            absUserId: absId,
+                            absUsername: absUsername,
+                            matchType: 'manual',
+                            isSelected: true
                         });
                     }
                 }
@@ -478,13 +480,14 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"'
             },
-            body: JSON.stringify({ Matches: userMatches.filter(function (m) { return m.IsSelected && m.AbsUserId; }) })
+            body: JSON.stringify({ matches: userMatches.filter(function (m) { return m.isSelected && m.absUserId; }) })
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-            status.textContent = 'Saved ' + data.SavedCount + ' mapping(s)';
+            status.textContent = 'Saved ' + data.savedCount + ' mapping(s)';
             status.style.color = 'var(--success-color, green)';
 
             // Refresh the token table to show newly mapped users
@@ -545,17 +548,18 @@
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
+                'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"',
                 'X-Abs-Token': token
             }
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-            if (data.Success) {
+            if (data.success) {
                 status.style.color = 'var(--success-color, green)';
-                status.textContent = '✓ Connected as ' + (data.Username || 'unknown');
+                status.textContent = '✓ Connected as ' + (data.username || 'unknown');
             } else {
                 status.style.color = 'var(--error-color, red)';
-                status.textContent = '✗ ' + (data.Error || 'Connection failed');
+                status.textContent = '✗ ' + (data.error || 'Connection failed');
             }
         })
         .catch(function () {
@@ -567,6 +571,8 @@
     document.addEventListener('viewshow', function (e) {
         const page = e.detail.getAttribute ? e.detail : document.querySelector('#' + pageId);
         if (!page) return;
+        if (page.dataset.absInitialized) return;
+        page.dataset.absInitialized = 'true';
 
         loadConfig(page);
 
