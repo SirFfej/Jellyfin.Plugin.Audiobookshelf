@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix config page: user token entries now correctly persisted (UserTokenEntries instead of XmlIgnore UserTokenMap); saveConfig and saveUserMappings use safe plugin ID and token helpers; post-mapping table refresh uses entries array.",
+        "checksum": "af4a87f9e346bfc4063b418a9a0903b4",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.4.0/Jellyfin.Plugin.Audiobookshelf_1.0.4.0.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-06T00:00:00Z",
+        "version": "1.0.4.0"
+      },
+      {
         "changelog": "Fix assembly version mismatch: compile against Jellyfin.Controller 10.11.3 (matching server) instead of 10.11.8; forward-compatible with any 10.11.x server via .NET roll-forward.",
         "checksum": "34b8eaa5d39bebc12673fe6745e0a3ca",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.3.0/Jellyfin.Plugin.Audiobookshelf_1.0.3.0.zip",

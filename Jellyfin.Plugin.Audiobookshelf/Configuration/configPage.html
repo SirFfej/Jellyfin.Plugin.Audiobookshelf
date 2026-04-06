@@ -226,15 +226,28 @@
 
     function loadConfig(page) {
         ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
-            page.querySelector('#absServerUrl').value = config.AbsServerUrl || '';
-            page.querySelector('#absAdminToken').value = config.AdminApiToken || '';
-            page.querySelector('#absLibraryIds').value = (config.IncludedLibraryIds || []).join(', ');
-            page.querySelector('#absSyncInterval').value = config.ProgressSyncIntervalMinutes || 10;
-            page.querySelector('#absEnableOutbound').checked = config.EnableOutboundSync !== false;
-            page.querySelector('#absEnableInbound').checked = config.EnableInboundSync !== false;
-            page.querySelector('#absEnableMetadata').checked = config.EnableMetadataProvider !== false;
-            page.querySelector('#absEnablePodcasts').checked = config.EnablePodcastLibraries === true;
-            renderUserTokenTable(page, config.UserTokenMap || {});
+            page.querySelector('#absServerUrl').value = config.AbsServerUrl || config.absServerUrl || '';
+            page.querySelector('#absAdminToken').value = config.AdminApiToken || config.adminApiToken || '';
+            var libIds = config.IncludedLibraryIds || config.includedLibraryIds || [];
+            page.querySelector('#absLibraryIds').value = libIds.join(', ');
+            page.querySelector('#absSyncInterval').value = config.ProgressSyncIntervalMinutes || config.progressSyncIntervalMinutes || 10;
+            var outbound = config.EnableOutboundSync !== undefined ? config.EnableOutboundSync : config.enableOutboundSync;
+            var inbound  = config.EnableInboundSync  !== undefined ? config.EnableInboundSync  : config.enableInboundSync;
+            var metadata = config.EnableMetadataProvider !== undefined ? config.EnableMetadataProvider : config.enableMetadataProvider;
+            var podcasts = config.EnablePodcastLibraries !== undefined ? config.EnablePodcastLibraries : config.enablePodcastLibraries;
+            page.querySelector('#absEnableOutbound').checked = outbound !== false;
+            page.querySelector('#absEnableInbound').checked  = inbound  !== false;
+            page.querySelector('#absEnableMetadata').checked = metadata !== false;
+            page.querySelector('#absEnablePodcasts').checked = podcasts === true;
+            // Build token map from UserTokenEntries (the serializable backing list)
+            var tokenMap = {};
+            var entries = config.UserTokenEntries || config.userTokenEntries || [];
+            entries.forEach(function (e) {
+                var id  = e.UserId  || e.userId;
+                var tok = e.Token   || e.token;
+                if (id && tok) { tokenMap[id] = tok; }
+            });
+            renderUserTokenTable(page, tokenMap);
         }).catch(function (err) {
             console.error('[ABS] Failed to load plugin configuration:', err);
         });
@@ -496,7 +509,7 @@
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"'
+                'Authorization': 'MediaBrowser Token="' + getJellyfinToken() + '"'
             },
             body: JSON.stringify({ matches: userMatches.filter(function (m) { return m.isSelected && m.absUserId; }) })
         })
@@ -507,7 +520,14 @@
 
             // Refresh the token table to show newly mapped users
             ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
-                renderUserTokenTable(page, config.UserTokenMap || {});
+                var tokenMap = {};
+                var entries = config.UserTokenEntries || config.userTokenEntries || [];
+                entries.forEach(function (e) {
+                    var id  = e.UserId  || e.userId;
+                    var tok = e.Token   || e.token;
+                    if (id && tok) { tokenMap[id] = tok; }
+                });
+                renderUserTokenTable(page, tokenMap);
             });
         })
         .catch(function (err) {
@@ -532,15 +552,14 @@
             config.EnablePodcastLibraries = page.querySelector('#absEnablePodcasts').checked;
 
             const tokenInputs = page.querySelectorAll('.abs-user-token');
-            const tokenMap = {};
+            config.UserTokenEntries = [];
             tokenInputs.forEach(function (input) {
                 if (input.value) {
-                    tokenMap[input.dataset.userid] = input.value;
+                    config.UserTokenEntries.push({ UserId: input.dataset.userid, Token: input.value });
                 }
             });
-            config.UserTokenMap = tokenMap;
 
-            ApiClient.updatePluginConfiguration(Plugin.Instance.Id, config).then(function () {
+            ApiClient.updatePluginConfiguration(getPluginId(), config).then(function () {
                 Dashboard.processPluginConfigurationUpdateResult();
             });
         });
@@ -584,8 +603,8 @@
     }
 
     document.addEventListener('viewshow', function (e) {
-        var page = e.detail;
-        if (!page || page.id !== pageId) return;
+        var page = document.querySelector('#' + pageId);
+        if (!page) return;
         if (page.dataset.absInitialized) return;
         page.dataset.absInitialized = 'true';
 
