@@ -61,9 +61,17 @@ public partial class ChapterSyncTask : IScheduledTask
     /// <inheritdoc />
     public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
-        if (Plugin.Instance?.Configuration.EnableMetadataProvider != true)
+        var config = Plugin.Instance?.Configuration;
+        if (config?.EnableMetadataProvider != true)
         {
             _logger.LogDebug("ABS metadata provider is disabled — skipping chapter sync");
+            progress.Report(100);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(config?.AbsServerUrl) || string.IsNullOrWhiteSpace(config?.AdminApiToken))
+        {
+            _logger.LogDebug("ABS server URL or admin token not configured — skipping chapter sync");
             progress.Report(100);
             return;
         }
