@@ -7,6 +7,7 @@
     "name": "Audiobookshelf",
     "overview": "Integrates Jellyfin with a self-hosted Audiobookshelf server. Provides metadata enrichment, cover images, chapter sync, and bidirectional listening progress sync for all mapped users.",
     "owner": "SirFfej",
+    "versions": [
       {
         "changelog": "Fix assembly version mismatch: compile against Jellyfin.Controller 10.11.3 (matching server) instead of 10.11.8; forward-compatible with any 10.11.x server via .NET roll-forward.",
         "checksum": "34b8eaa5d39bebc12673fe6745e0a3ca",
