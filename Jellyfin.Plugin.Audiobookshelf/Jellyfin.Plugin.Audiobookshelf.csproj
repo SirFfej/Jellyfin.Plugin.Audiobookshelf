@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <AssemblyName>Jellyfin.Plugin.Audiobookshelf</AssemblyName>
     <RootNamespace>Jellyfin.Plugin.Audiobookshelf</RootNamespace>
-    <Version>1.0.1.0</Version>
+    <Version>1.0.2.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -27,10 +27,10 @@
       When the plugin loader then finds two copies of the same assembly in different
       load contexts, registration fails silently.
     -->
-    <PackageReference Include="Jellyfin.Controller" Version="10.10.7">
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.8">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="Jellyfin.Model" Version="10.10.7">
+    <PackageReference Include="Jellyfin.Model" Version="10.11.8">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
 
@@ -38,8 +38,8 @@
       Microsoft.Extensions.* packages are NOT excluded — the Jellyfin plugin load
       context does not expose these to plugins, so they must ship with the DLL.
     -->
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.11" />
   </ItemGroup>
 
   <!-- ASP.NET Core types provided by the host at runtime -->

@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Jellyfin 10.11.x compatibility: update NuGet packages to 10.11.8; replace IChapterManager (Video-only) with IChapterRepository for audiobook chapter sync; fix Jellyfin.Data.Entities namespace removal (var inference); fix TaskTriggerInfoType enum rename; add [Authorize] to API controller; config page viewshow reliability fix; Plugin.Instance GUID fallback; ApiClient.accessToken safety guard.",
+        "checksum": "fdaa2a7d6f210cd1ed89f88e2abf4e12",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.2.0/Jellyfin.Plugin.Audiobookshelf_1.0.2.0.zip",
+        "targetAbi": "10.11.0.0",
+        "timestamp": "2026-04-06T00:00:00Z",
+        "version": "1.0.2.0"
+      },
+      {
         "changelog": "Bug fixes: config page checkboxes now interactive; Authorization header added to all API calls; camelCase JSON property names corrected; browser no longer treats server URL + token as a login form; XML serialization crash fixed (Dictionary replaced with serializable List).",
         "checksum": "93c14437875e0a20347e96d9f0553e28",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.1.0/Jellyfin.Plugin.Audiobookshelf_1.0.1.0.zip",

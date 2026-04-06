@@ -209,10 +209,23 @@
     'use strict';
 
     const pageId = 'audiobookshelfConfigPage';
+    const pluginGuid = '7b2f4a1d-e3c0-4e8b-9d5a-3f7c6b2e0a14';
     let userMatches = [];
 
+    function getPluginId() {
+        return (Plugin && Plugin.Instance && Plugin.Instance.Id) || pluginGuid;
+    }
+
+    function getJellyfinToken() {
+        try {
+            return typeof ApiClient.accessToken === 'function' ? ApiClient.accessToken() : '';
+        } catch (e) {
+            return '';
+        }
+    }
+
     function loadConfig(page) {
-        ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
+        ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
             page.querySelector('#absServerUrl').value = config.AbsServerUrl || '';
             page.querySelector('#absAdminToken').value = config.AdminApiToken || '';
             page.querySelector('#absLibraryIds').value = (config.IncludedLibraryIds || []).join(', ');
@@ -222,6 +235,8 @@
             page.querySelector('#absEnableMetadata').checked = config.EnableMetadataProvider !== false;
             page.querySelector('#absEnablePodcasts').checked = config.EnablePodcastLibraries === true;
             renderUserTokenTable(page, config.UserTokenMap || {});
+        }).catch(function (err) {
+            console.error('[ABS] Failed to load plugin configuration:', err);
         });
     }
 
@@ -356,7 +371,7 @@
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
-                'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"',
+                'Authorization': 'MediaBrowser Token="' + getJellyfinToken() + '"',
                 'X-Abs-Token': token
             }
         })
@@ -491,7 +506,7 @@
             status.style.color = 'var(--success-color, green)';
 
             // Refresh the token table to show newly mapped users
-            ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
+            ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
                 renderUserTokenTable(page, config.UserTokenMap || {});
             });
         })
@@ -503,7 +518,7 @@
     }
 
     function saveConfig(page) {
-        ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
+        ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
             config.AbsServerUrl = page.querySelector('#absServerUrl').value.replace(/\/$/, '');
             config.AdminApiToken = page.querySelector('#absAdminToken').value;
             const libIds = page.querySelector('#absLibraryIds').value;
@@ -548,7 +563,7 @@
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
-                'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"',
+                'Authorization': 'MediaBrowser Token="' + getJellyfinToken() + '"',
                 'X-Abs-Token': token
             }
         })
@@ -569,8 +584,8 @@
     }
 
     document.addEventListener('viewshow', function (e) {
-        const page = e.detail.getAttribute ? e.detail : document.querySelector('#' + pageId);
-        if (!page) return;
+        var page = e.detail;
+        if (!page || page.id !== pageId) return;
         if (page.dataset.absInitialized) return;
         page.dataset.absInitialized = 'true';
 

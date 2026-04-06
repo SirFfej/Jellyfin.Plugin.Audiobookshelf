@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Data.Entities;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Controller.Entities;
@@ -145,12 +144,12 @@ public partial class InboundSyncTask : IScheduledTask
         [
             new TaskTriggerInfo
             {
-                Type = TaskTriggerInfo.TriggerInterval,
+                Type = TaskTriggerInfoType.IntervalTrigger,
                 IntervalTicks = TimeSpan.FromMinutes(intervalMinutes).Ticks
             },
             new TaskTriggerInfo
             {
-                Type = TaskTriggerInfo.TriggerStartup
+                Type = TaskTriggerInfoType.StartupTrigger
             }
         ];
     }
@@ -168,7 +167,7 @@ public partial class InboundSyncTask : IScheduledTask
             return;
         }
 
-        User? jellyfinUser = _userManager.GetUserById(jellyfinGuid);
+        var jellyfinUser = _userManager.GetUserById(jellyfinGuid);
         if (jellyfinUser is null)
         {
             LogUserNotFound(_logger, jellyfinUserId);

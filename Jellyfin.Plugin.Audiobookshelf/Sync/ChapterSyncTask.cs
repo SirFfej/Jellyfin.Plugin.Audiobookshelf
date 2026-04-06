@@ -5,9 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
-using MediaBrowser.Controller.Chapters;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Persistence;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
@@ -22,7 +22,7 @@ public partial class ChapterSyncTask : IScheduledTask
 {
     private readonly AbsApiClientFactory _clientFactory;
     private readonly ILibraryManager _libraryManager;
-    private readonly IChapterManager _chapterManager;
+    private readonly IChapterRepository _chapterRepository;
     private readonly ILogger<ChapterSyncTask> _logger;
 
     /// <summary>
@@ -31,12 +31,12 @@ public partial class ChapterSyncTask : IScheduledTask
     public ChapterSyncTask(
         AbsApiClientFactory clientFactory,
         ILibraryManager libraryManager,
-        IChapterManager chapterManager,
+        IChapterRepository chapterRepository,
         ILogger<ChapterSyncTask> logger)
     {
         _clientFactory = clientFactory;
         _libraryManager = libraryManager;
-        _chapterManager = chapterManager;
+        _chapterRepository = chapterRepository;
         _logger = logger;
     }
 
@@ -111,7 +111,7 @@ public partial class ChapterSyncTask : IScheduledTask
                         })
                         .ToList();
 
-                    _chapterManager.SaveChapters(item.Id, chapters);
+                    _chapterRepository.SaveChapters(item.Id, chapters);
                     LogChaptersSaved(_logger, absItemId!, chapters.Count);
                 }
             }

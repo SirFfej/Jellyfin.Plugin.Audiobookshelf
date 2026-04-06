@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Data.Entities;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Controller.Entities;
@@ -157,7 +156,7 @@ public partial class OutboundSyncTask : IScheduledTask
             return;
         }
 
-        User? jellyfinUser = _userManager.GetUserById(jellyfinGuid);
+        var jellyfinUser = _userManager.GetUserById(jellyfinGuid);
         if (jellyfinUser is null)
         {
             LogUserNotFound(_logger, jellyfinUserId);

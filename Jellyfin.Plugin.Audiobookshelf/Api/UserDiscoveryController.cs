@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Audiobookshelf.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +16,7 @@ namespace Jellyfin.Plugin.Audiobookshelf.Api;
 /// Controller for user discovery and mapping between Jellyfin and Audiobookshelf.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("Audiobookshelf/[controller]")]
 public class UserDiscoveryController : ControllerBase
 {
