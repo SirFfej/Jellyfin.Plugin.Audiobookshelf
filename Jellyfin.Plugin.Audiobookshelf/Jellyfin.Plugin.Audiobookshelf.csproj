@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <AssemblyName>Jellyfin.Plugin.Audiobookshelf</AssemblyName>
     <RootNamespace>Jellyfin.Plugin.Audiobookshelf</RootNamespace>
-    <Version>1.0.2.0</Version>
+    <Version>1.0.3.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -27,10 +27,10 @@
       When the plugin loader then finds two copies of the same assembly in different
       load contexts, registration fails silently.
     -->
-    <PackageReference Include="Jellyfin.Controller" Version="10.11.8">
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.3">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="Jellyfin.Model" Version="10.11.8">
+    <PackageReference Include="Jellyfin.Model" Version="10.11.3">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
 

@@ -7,9 +7,16 @@
     "name": "Audiobookshelf",
     "overview": "Integrates Jellyfin with a self-hosted Audiobookshelf server. Provides metadata enrichment, cover images, chapter sync, and bidirectional listening progress sync for all mapped users.",
     "owner": "SirFfej",
-    "versions": [
       {
-        "changelog": "Jellyfin 10.11.x compatibility: update NuGet packages to 10.11.8; replace IChapterManager (Video-only) with IChapterRepository for audiobook chapter sync; fix Jellyfin.Data.Entities namespace removal (var inference); fix TaskTriggerInfoType enum rename; add [Authorize] to API controller; config page viewshow reliability fix; Plugin.Instance GUID fallback; ApiClient.accessToken safety guard.",
+        "changelog": "Fix assembly version mismatch: compile against Jellyfin.Controller 10.11.3 (matching server) instead of 10.11.8; forward-compatible with any 10.11.x server via .NET roll-forward.",
+        "checksum": "34b8eaa5d39bebc12673fe6745e0a3ca",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.3.0/Jellyfin.Plugin.Audiobookshelf_1.0.3.0.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-06T00:00:00Z",
+        "version": "1.0.3.0"
+      },
+      {
+        "changelog": "Jellyfin 10.11.x compatibility: replace IChapterManager (Video-only) with IChapterRepository; fix Jellyfin.Data.Entities removal; fix TaskTriggerInfoType enum; add [Authorize] to controller; config page viewshow/GUID/accessToken fixes.",
         "checksum": "fdaa2a7d6f210cd1ed89f88e2abf4e12",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.2.0/Jellyfin.Plugin.Audiobookshelf_1.0.2.0.zip",
         "targetAbi": "10.11.0.0",
