@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix config save: use camelCase keys matching Jellyfin JSON serializer so URL and token actually persist. Add result modal for Test Connection, Discover Users, and Save Mappings. Fix empty-selection guard in Save Mappings.",
+        "checksum": "b08619a502d316b38c0e05b7bf335640",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.5.0/Jellyfin.Plugin.Audiobookshelf_1.0.5.0.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-07T00:00:00Z",
+        "version": "1.0.5.0"
+      },
+      {
         "changelog": "Fix config page token persistence (UserTokenEntries vs XmlIgnore UserTokenMap); fix ChapterSyncTask crash when URL/token not yet configured; safe plugin ID and token helpers throughout.",
         "checksum": "5ad1ffcdea4f4481ede527596f13a1ec",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.4.0/Jellyfin.Plugin.Audiobookshelf_1.0.4.0.zip",
