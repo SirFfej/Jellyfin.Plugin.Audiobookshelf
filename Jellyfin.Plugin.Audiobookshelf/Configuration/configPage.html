@@ -20,16 +20,13 @@
             border: 1px solid var(--border-color, #444);
             border-radius: 8px;
             padding: 28px 32px;
-            max-width: 420px;
+            max-width: 440px;
             width: 90%;
             text-align: center;
         }
         #absModalIcon { font-size: 2.5em; margin-bottom: 12px; }
         #absModalMessage { margin-bottom: 20px; line-height: 1.5; white-space: pre-wrap; }
-        #absModalOk {
-            min-width: 80px;
-            cursor: pointer;
-        }
+        #absModalOk { min-width: 80px; cursor: pointer; }
         /* ───────────────────────────────────────────────────────────── */
 
         .user-match-card {
@@ -41,37 +38,20 @@
             align-items: center;
             gap: 12px;
         }
-        .user-match-card.matched {
-            background-color: var(--accent-color-translucent, rgba(0,128,0,0.1));
-        }
-        .user-match-card.unmatched {
-            background-color: var(--warning-color-translucent, rgba(255,165,0,0.1));
-        }
-        .match-icon {
-            font-size: 24px;
-        }
-        .match-info {
-            flex: 1;
-        }
-        .match-type {
-            font-size: 12px;
-            color: var(--text-secondary, #666);
-        }
-        #userDiscoverySection {
-            display: block;
-        }
+        .user-match-card.matched   { background-color: rgba(0,128,0,0.1); }
+        .user-match-card.unmatched { background-color: rgba(255,165,0,0.1); }
+        .match-icon { font-size: 24px; }
+        .match-info { flex: 1; }
+        .match-type { font-size: 12px; color: var(--text-secondary, #666); }
         .loading-spinner {
             display: inline-block;
-            width: 16px;
-            height: 16px;
+            width: 16px; height: 16px;
             border: 2px solid var(--border-color, #ddd);
             border-top-color: var(--accent-color, #00a0dc);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -97,8 +77,7 @@
                            type="text"
                            class="emby-input"
                            placeholder="http://192.168.1.10:13378"
-                           autocomplete="url"
-                           required />
+                           autocomplete="off" />
                     <div class="fieldDescription">
                         Base URL of your Audiobookshelf server — no trailing slash.
                         Example: <code>http://192.168.1.10:13378</code> or <code>https://abs.example.com</code>.
@@ -109,9 +88,9 @@
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="absAdminToken">Admin API Token</label>
                     <input id="absAdminToken"
-                           type="password"
+                           type="text"
                            class="emby-input"
-                           autocomplete="new-password"
+                           autocomplete="off"
                            placeholder="eyJhbGciOiJIUzI1NiIs…" />
                     <div class="fieldDescription">
                         ABS API token used for library browsing and metadata.
@@ -120,78 +99,73 @@
                 </div>
 
                 <!-- Test Connection -->
-                <div style="margin-bottom: 24px;">
+                <div style="margin-bottom: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                     <button is="emby-button" type="button" id="absTestConnection" class="raised emby-button">
                         <span>Test Connection</span>
                     </button>
-                    <span id="absConnectionStatus" style="margin-left: 12px; color: var(--text-color-secondary);"></span>
+                    <span id="absConnectionStatus" style="color: var(--text-color-secondary);"></span>
                 </div>
 
+                <!-- Libraries -->
                 <div class="verticalSection">
                     <h3 class="sectionTitle">Libraries</h3>
                     <p class="fieldDescription">
                         Leave blank to expose all ABS libraries. Enter comma-separated library IDs to restrict.
                     </p>
                 </div>
-
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="absLibraryIds">Included Library IDs (optional)</label>
                     <input id="absLibraryIds"
                            type="text"
                            class="emby-input"
                            placeholder="lib_abc123, lib_def456" />
-                    <div class="fieldDescription" id="absLibraryList" style="margin-top: 8px;"></div>
                 </div>
 
+                <!-- Progress Sync -->
                 <div class="verticalSection">
                     <h3 class="sectionTitle">Progress Sync</h3>
                 </div>
-
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
-                        <input type="checkbox" id="absEnableOutbound" class="emby-checkbox" />
+                        <input type="checkbox" id="absEnableOutbound" is="emby-checkbox" />
                         <span>Push progress to ABS when playing in Jellyfin</span>
                     </label>
                 </div>
-
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
-                        <input type="checkbox" id="absEnableInbound" class="emby-checkbox" />
+                        <input type="checkbox" id="absEnableInbound" is="emby-checkbox" />
                         <span>Pull progress from ABS on schedule</span>
                     </label>
                 </div>
-
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="absSyncInterval">Sync interval (minutes)</label>
                     <input id="absSyncInterval"
                            type="number"
                            class="emby-input"
-                           min="1"
-                           max="1440"
-                           value="10" />
+                           min="1" max="1440" value="10" />
                 </div>
 
+                <!-- Metadata Provider -->
                 <div class="verticalSection">
                     <h3 class="sectionTitle">Metadata Provider</h3>
                     <p class="fieldDescription">
                         Disable this when using the channel mode exclusively to avoid books appearing twice.
                     </p>
                 </div>
-
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
-                        <input type="checkbox" id="absEnableMetadata" class="emby-checkbox" />
+                        <input type="checkbox" id="absEnableMetadata" is="emby-checkbox" />
                         <span>Enable metadata provider (enriches locally-scanned books)</span>
                     </label>
                 </div>
-
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
-                        <input type="checkbox" id="absEnablePodcasts" class="emby-checkbox" />
-                        <span>Include podcast libraries when auto-discovering (experimental — metadata enrichment for podcasts is not yet implemented)</span>
+                        <input type="checkbox" id="absEnablePodcasts" is="emby-checkbox" />
+                        <span>Include podcast libraries when auto-discovering (experimental)</span>
                     </label>
                 </div>
 
+                <!-- User Mapping -->
                 <div class="verticalSection">
                     <h3 class="sectionTitle">User Mapping</h3>
                     <p class="fieldDescription">
@@ -200,25 +174,23 @@
                     </p>
                 </div>
 
-                <div id="userDiscoverySection">
-                    <div style="margin-bottom: 16px;">
-                        <button is="emby-button" type="button" id="discoverUsers" class="raised emby-button">
-                            <span>Discover Users</span>
-                        </button>
-                        <span id="discoverStatus" style="margin-left: 12px; color: var(--text-color-secondary);"></span>
-                    </div>
-
-                    <div id="userMatchesList"></div>
+                <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <button is="emby-button" type="button" id="discoverUsers" class="raised emby-button">
+                        <span>Discover Users</span>
+                    </button>
+                    <span id="discoverStatus" style="color: var(--text-color-secondary);"></span>
                 </div>
 
-                <div id="userTokenSection">
+                <div id="userMatchesList" style="margin-bottom: 16px;"></div>
+
+                <div class="verticalSection" style="margin-top: 8px;">
+                    <h4 class="sectionTitle">Per-User ABS Tokens</h4>
                     <p class="fieldDescription">
-                        Or manually enter per-user ABS tokens below:
+                        Manually enter or review individual ABS API tokens per Jellyfin user.
+                        User Discovery above can populate these automatically.
                     </p>
-                    <div id="absUserTokenList" style="margin-bottom: 24px;">
-                        <!-- Populated dynamically -->
-                    </div>
                 </div>
+                <div id="absUserTokenList" style="margin-bottom: 24px;"></div>
 
                 <div>
                     <button is="emby-button" type="submit" class="raised button-submit block emby-button">
@@ -230,41 +202,33 @@
 
         </div>
     </div>
+
+    <!-- Result modal — must be INSIDE data-role="page" so Jellyfin's SPA renders it -->
+    <div id="absModal" role="dialog" aria-modal="true">
+        <div id="absModalBox">
+            <div id="absModalIcon"></div>
+            <div id="absModalMessage"></div>
+            <button is="emby-button" type="button" id="absModalOk" class="raised emby-button">OK</button>
+        </div>
+    </div>
+
 </div>
 
 <script type="text/javascript">
 (function () {
     'use strict';
 
-    const pageId = 'audiobookshelfConfigPage';
-    const pluginGuid = '7b2f4a1d-e3c0-4e8b-9d5a-3f7c6b2e0a14';
-    let userMatches = [];
+    var pluginGuid = '7b2f4a1d-e3c0-4e8b-9d5a-3f7c6b2e0a14';
+    var userMatches = [];
 
-    // ── Modal helper ──────────────────────────────────────────────────────────
-    function showModal(icon, message) {
-        var modal = document.getElementById('absModal');
-        document.getElementById('absModalIcon').textContent    = icon;
-        document.getElementById('absModalMessage').textContent = message;
-        modal.classList.add('open');
-        document.getElementById('absModalOk').focus();
-    }
-    document.addEventListener('click', function (e) {
-        if (e.target && e.target.id === 'absModalOk') {
-            document.getElementById('absModal').classList.remove('open');
-        }
-    });
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' || e.key === 'Enter') {
-            var modal = document.getElementById('absModal');
-            if (modal && modal.classList.contains('open')) {
-                modal.classList.remove('open');
-            }
-        }
-    });
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     function getPluginId() {
-        return (Plugin && Plugin.Instance && Plugin.Instance.Id) || pluginGuid;
+        try {
+            return (Plugin && Plugin.Instance && Plugin.Instance.Id) || pluginGuid;
+        } catch (e) {
+            return pluginGuid;
+        }
     }
 
     function getJellyfinToken() {
@@ -275,35 +239,6 @@
         }
     }
 
-    function loadConfig(page) {
-        ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
-            page.querySelector('#absServerUrl').value = config.AbsServerUrl || config.absServerUrl || '';
-            page.querySelector('#absAdminToken').value = config.AdminApiToken || config.adminApiToken || '';
-            var libIds = config.IncludedLibraryIds || config.includedLibraryIds || [];
-            page.querySelector('#absLibraryIds').value = libIds.join(', ');
-            page.querySelector('#absSyncInterval').value = config.ProgressSyncIntervalMinutes || config.progressSyncIntervalMinutes || 10;
-            var outbound = config.EnableOutboundSync !== undefined ? config.EnableOutboundSync : config.enableOutboundSync;
-            var inbound  = config.EnableInboundSync  !== undefined ? config.EnableInboundSync  : config.enableInboundSync;
-            var metadata = config.EnableMetadataProvider !== undefined ? config.EnableMetadataProvider : config.enableMetadataProvider;
-            var podcasts = config.EnablePodcastLibraries !== undefined ? config.EnablePodcastLibraries : config.enablePodcastLibraries;
-            page.querySelector('#absEnableOutbound').checked = outbound !== false;
-            page.querySelector('#absEnableInbound').checked  = inbound  !== false;
-            page.querySelector('#absEnableMetadata').checked = metadata !== false;
-            page.querySelector('#absEnablePodcasts').checked = podcasts === true;
-            // Build token map from UserTokenEntries (the serializable backing list)
-            var tokenMap = {};
-            var entries = config.UserTokenEntries || config.userTokenEntries || [];
-            entries.forEach(function (e) {
-                var id  = e.UserId  || e.userId;
-                var tok = e.Token   || e.token;
-                if (id && tok) { tokenMap[id] = tok; }
-            });
-            renderUserTokenTable(page, tokenMap);
-        }).catch(function (err) {
-            console.error('[ABS] Failed to load plugin configuration:', err);
-        });
-    }
-
     function esc(str) {
         return String(str)
             .replace(/&/g, '&amp;')
@@ -312,63 +247,135 @@
             .replace(/"/g, '&quot;');
     }
 
+    // ── Modal ─────────────────────────────────────────────────────────────────
+
+    function showModal(icon, message) {
+        var modal = document.getElementById('absModal');
+        if (!modal) { alert(icon + ' ' + message); return; }
+        document.getElementById('absModalIcon').textContent    = icon;
+        document.getElementById('absModalMessage').textContent = message;
+        modal.classList.add('open');
+        var ok = document.getElementById('absModalOk');
+        if (ok) ok.focus();
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target && e.target.id === 'absModalOk') {
+            var modal = document.getElementById('absModal');
+            if (modal) modal.classList.remove('open');
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' || e.key === 'Enter') {
+            var modal = document.getElementById('absModal');
+            if (modal && modal.classList.contains('open')) {
+                modal.classList.remove('open');
+            }
+        }
+    });
+
+    // ── Load config ───────────────────────────────────────────────────────────
+
+    function loadConfig(page) {
+        ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
+            // Support both camelCase (server JSON output) and PascalCase (legacy)
+            page.querySelector('#absServerUrl').value =
+                config.absServerUrl || config.AbsServerUrl || '';
+            page.querySelector('#absAdminToken').value =
+                config.adminApiToken || config.AdminApiToken || '';
+
+            var libIds = config.includedLibraryIds || config.IncludedLibraryIds || [];
+            page.querySelector('#absLibraryIds').value = libIds.join(', ');
+
+            page.querySelector('#absSyncInterval').value =
+                config.progressSyncIntervalMinutes || config.ProgressSyncIntervalMinutes || 10;
+
+            function boolVal(camel, pascal, defaultVal) {
+                var v = config[camel] !== undefined ? config[camel] : config[pascal];
+                return v !== undefined ? v : defaultVal;
+            }
+
+            page.querySelector('#absEnableOutbound').checked = boolVal('enableOutboundSync',    'EnableOutboundSync',    true);
+            page.querySelector('#absEnableInbound').checked  = boolVal('enableInboundSync',     'EnableInboundSync',     true);
+            page.querySelector('#absEnableMetadata').checked = boolVal('enableMetadataProvider','EnableMetadataProvider',true);
+            page.querySelector('#absEnablePodcasts').checked = boolVal('enablePodcastLibraries','EnablePodcastLibraries',false);
+
+            var tokenMap = {};
+            var entries = config.userTokenEntries || config.UserTokenEntries || [];
+            entries.forEach(function (e) {
+                var id  = e.userId  || e.UserId;
+                var tok = e.token   || e.Token;
+                if (id && tok) tokenMap[id] = tok;
+            });
+            renderUserTokenTable(page, tokenMap);
+        }).catch(function (err) {
+            console.error('[ABS] Failed to load plugin configuration:', err);
+        });
+    }
+
+    // ── User token table ──────────────────────────────────────────────────────
+
     function renderUserTokenTable(page, tokenMap) {
-        const container = page.querySelector('#absUserTokenList');
         ApiClient.getUsers().then(function (users) {
-            const userMap = {};
+            var userMap = {};
             users.forEach(function (u) { userMap[u.Id] = u.Name; });
-            rebuildTokenTable(container, tokenMap, userMap);
+            rebuildTokenTable(page.querySelector('#absUserTokenList'), tokenMap, userMap);
+        }).catch(function () {
+            page.querySelector('#absUserTokenList').textContent = 'Could not load Jellyfin users.';
         });
     }
 
     function rebuildTokenTable(container, tokenMap, userMap) {
-        const mapped = Object.keys(tokenMap).filter(function (id) { return tokenMap[id]; });
+        var mapped   = Object.keys(tokenMap).filter(function (id) { return tokenMap[id]; });
+        var unmapped = Object.keys(userMap).filter(function (id) { return !tokenMap[id]; });
 
-        let html = '<table class="detailTable" style="width:100%;margin-bottom:8px;">' +
-            '<thead><tr><th>Jellyfin User</th><th>ABS API Token</th><th style="width:40px;"></th></tr></thead>' +
-            '<tbody id="absTokenTableBody">';
+        var html = '<table class="detailTable" style="width:100%;margin-bottom:8px;">' +
+            '<thead><tr>' +
+            '<th style="text-align:left;">Jellyfin User</th>' +
+            '<th style="text-align:left;">ABS API Token</th>' +
+            '<th style="width:40px;"></th>' +
+            '</tr></thead><tbody id="absTokenTableBody">';
 
         mapped.forEach(function (userId) {
-            const name = esc(userMap[userId] || userId);
-            const token = esc(tokenMap[userId]);
+            var name = esc(userMap[userId] || userId);
+            var tok  = esc(tokenMap[userId]);
             html += '<tr data-userid="' + esc(userId) + '">' +
                 '<td>' + name + '</td>' +
                 '<td><input type="password" class="emby-input abs-user-token" autocomplete="off" ' +
-                'data-userid="' + esc(userId) + '" value="' + token + '" style="width:100%"/></td>' +
-                '<td><button type="button" class="emby-button abs-remove-token" title="Remove" ' +
-                'data-userid="' + esc(userId) + '" style="min-width:0;padding:4px 8px;">✕</button></td>' +
-                '</tr>';
+                'data-userid="' + esc(userId) + '" value="' + tok + '" style="width:100%"/></td>' +
+                '<td><button type="button" class="emby-button abs-remove-token" ' +
+                'data-userid="' + esc(userId) + '" title="Remove" ' +
+                'style="min-width:0;padding:4px 8px;">✕</button></td></tr>';
         });
 
         html += '</tbody></table>';
 
-        const unmapped = Object.keys(userMap).filter(function (id) { return !tokenMap[id]; });
-        html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">';
-        html += '<select class="emby-select abs-add-user-select" style="flex:0 1 auto;min-width:160px;">' +
+        html += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">' +
+            '<select class="emby-select abs-add-user-select" style="flex:0 1 auto;min-width:160px;">' +
             '<option value="">— Add user —</option>';
         unmapped.forEach(function (id) {
             html += '<option value="' + esc(id) + '">' + esc(userMap[id]) + '</option>';
         });
-        html += '</select>';
-        html += '<input type="password" class="emby-input abs-add-user-token" autocomplete="off" ' +
-            'placeholder="ABS token for this user" style="flex:1 1 180px;"/>';
-        html += '<button type="button" is="emby-button" class="raised emby-button abs-add-token-btn">Add</button>';
-        html += '</div>';
+        html += '</select>' +
+            '<input type="password" class="emby-input abs-add-user-token" autocomplete="off" ' +
+            'placeholder="ABS token for this user" style="flex:1 1 180px;"/>' +
+            '<button type="button" is="emby-button" class="raised emby-button abs-add-token-btn">Add</button>' +
+            '</div>';
 
         container.innerHTML = html;
 
         // Bind remove buttons
         container.querySelectorAll('.abs-remove-token').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                const userId = this.dataset.userid;
-                const row = container.querySelector('tr[data-userid="' + userId + '"]');
+                var userId = this.dataset.userid;
+                var row    = container.querySelector('tr[data-userid="' + userId + '"]');
                 if (!row) return;
-                const name = row.cells[0].textContent;
+                var name = row.cells[0].textContent;
                 row.remove();
-                // Return user to the Add dropdown
-                const select = container.querySelector('.abs-add-user-select');
+                var select = container.querySelector('.abs-add-user-select');
                 if (select) {
-                    const opt = document.createElement('option');
+                    var opt = document.createElement('option');
                     opt.value = userId;
                     opt.textContent = name;
                     select.appendChild(opt);
@@ -377,57 +384,59 @@
         });
 
         // Bind Add button
-        const addBtn = container.querySelector('.abs-add-token-btn');
+        var addBtn = container.querySelector('.abs-add-token-btn');
         if (addBtn) {
             addBtn.addEventListener('click', function () {
-                const select = container.querySelector('.abs-add-user-select');
-                const tokenInput = container.querySelector('.abs-add-user-token');
-                const userId = select.value;
-                const token = tokenInput.value.trim();
+                var select     = container.querySelector('.abs-add-user-select');
+                var tokenInput = container.querySelector('.abs-add-user-token');
+                var userId = select.value;
+                var token  = tokenInput.value.trim();
                 if (!userId || !token) return;
 
-                const name = select.options[select.selectedIndex].text;
-                const tbody = container.querySelector('#absTokenTableBody');
-                const tr = document.createElement('tr');
+                var name  = select.options[select.selectedIndex].text;
+                var tbody = container.querySelector('#absTokenTableBody');
+                var tr    = document.createElement('tr');
                 tr.dataset.userid = userId;
-                tr.innerHTML = '<td>' + esc(name) + '</td>' +
+                tr.innerHTML =
+                    '<td>' + esc(name) + '</td>' +
                     '<td><input type="password" class="emby-input abs-user-token" autocomplete="off" ' +
                     'data-userid="' + esc(userId) + '" value="' + esc(token) + '" style="width:100%"/></td>' +
-                    '<td><button type="button" class="emby-button abs-remove-token" title="Remove" ' +
-                    'data-userid="' + esc(userId) + '" style="min-width:0;padding:4px 8px;">✕</button></td>';
+                    '<td><button type="button" class="emby-button abs-remove-token" ' +
+                    'data-userid="' + esc(userId) + '" title="Remove" ' +
+                    'style="min-width:0;padding:4px 8px;">✕</button></td>';
                 tbody.appendChild(tr);
 
-                // Remove from dropdown, clear inputs
-                select.options[select.selectedIndex].remove();
-                select.value = '';
-                tokenInput.value = '';
-
-                // Bind remove on the new row
                 tr.querySelector('.abs-remove-token').addEventListener('click', function () {
                     tr.remove();
-                    const sel = container.querySelector('.abs-add-user-select');
+                    var sel = container.querySelector('.abs-add-user-select');
                     if (sel) {
-                        const opt = document.createElement('option');
+                        var opt = document.createElement('option');
                         opt.value = userId;
                         opt.textContent = name;
                         sel.appendChild(opt);
                     }
                 });
+
+                select.options[select.selectedIndex].remove();
+                select.value = '';
+                tokenInput.value = '';
             });
         }
     }
 
+    // ── Discover Users ────────────────────────────────────────────────────────
+
     function discoverUsers(page) {
-        const url = page.querySelector('#absServerUrl').value;
-        const token = page.querySelector('#absAdminToken').value;
-        const status = page.querySelector('#discoverStatus');
+        var url   = page.querySelector('#absServerUrl').value.trim();
+        var token = page.querySelector('#absAdminToken').value.trim();
+        var status = page.querySelector('#discoverStatus');
 
         if (!url || !token) {
-            showModal('⚠️', 'Server URL and Admin Token are required.\n\nEnter both fields and save before discovering users.');
+            showModal('⚠️', 'Server URL and Admin Token are required.\n\nEnter both fields and click Save before discovering users.');
             return;
         }
 
-        status.innerHTML = '<span class="loading-spinner"></span> Discovering users...';
+        status.innerHTML = '<span class="loading-spinner"></span> Discovering users\u2026';
         status.style.color = '';
 
         fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/Discover?serverUrl=' + encodeURIComponent(url)), {
@@ -438,119 +447,114 @@
                 'X-Abs-Token': token
             }
         })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
         .then(function (data) {
-            userMatches = data.matches;
-            renderUserMatches(page, data.matches);
-            status.textContent = 'Found ' + data.matches.length + ' user(s)';
+            userMatches = data.matches || [];
+            renderUserMatches(page, userMatches);
+            status.textContent = 'Found ' + userMatches.length + ' user(s)';
             status.style.color = 'var(--success-color, green)';
-            if (data.matches.length === 0) {
-                showModal('ℹ️', 'No users found.\n\nNo ABS users could be matched to Jellyfin users. Check that both servers have users with matching names.');
+            if (userMatches.length === 0) {
+                showModal('ℹ️', 'No users found.\n\nNo ABS users could be matched to Jellyfin users. Make sure both servers have users with matching names.');
             }
         })
         .catch(function (err) {
-            console.error('Failed to discover users:', err);
             status.textContent = '';
-            showModal('❌', 'User discovery failed.\n\nCould not retrieve users from Audiobookshelf. Check the server URL, token, and server availability.');
+            showModal('❌', 'User discovery failed.\n\nCould not retrieve users from Audiobookshelf.\nCheck the server URL, admin token, and server availability.\n\n(' + err + ')');
         });
     }
 
     function renderUserMatches(page, matches) {
-        const container = page.querySelector('#userMatchesList');
-        let html = '';
+        var container = page.querySelector('#userMatchesList');
+        var html = '';
 
         matches.forEach(function (match, index) {
-            const cardClass = match.matchType === 'exact' ? 'matched' : 'unmatched';
-            const icon = match.matchType === 'exact' ? '✓' : match.matchType === 'fuzzy' ? '?' : '✗';
-            const matchTypeText = match.matchType === 'exact' ? 'Exact match' : match.matchType === 'fuzzy' ? 'Possible match' : 'No match';
+            var cardClass    = match.matchType === 'exact' ? 'matched' : 'unmatched';
+            var icon         = match.matchType === 'exact' ? '✓' : match.matchType === 'fuzzy' ? '?' : '✗';
+            var matchTypeText = match.matchType === 'exact' ? 'Exact match' : match.matchType === 'fuzzy' ? 'Possible match' : 'No match';
 
             html += '<div class="user-match-card ' + cardClass + '">';
             html += '<span class="match-icon">' + icon + '</span>';
             html += '<div class="match-info">';
-            html += '<div><strong>' + (match.jellyfinUsername || 'No Jellyfin user') + '</strong>';
-            if (match.absUsername) {
-                html += ' ↔ <strong>' + match.absUsername + '</strong>';
-            }
+            html += '<div><strong>' + esc(match.jellyfinUsername || 'No Jellyfin user') + '</strong>';
+            if (match.absUsername) html += ' ↔ <strong>' + esc(match.absUsername) + '</strong>';
             html += '</div>';
             html += '<div class="match-type">' + matchTypeText + '</div>';
             html += '</div>';
 
             if (match.jellyfinUserId && match.absUserId) {
-                html += '<input type="checkbox" class="emby-checkbox match-checkbox" data-index="' + index + '" ' + (match.isSelected ? 'checked' : '') + ' />';
+                html += '<input type="checkbox" is="emby-checkbox" class="emby-checkbox match-checkbox" ' +
+                    'data-index="' + index + '" ' + (match.isSelected ? 'checked' : '') + ' />';
             } else if (match.absUserId) {
-                html += '<select class="emby-select match-select" data-abs-id="' + match.absUserId + '" data-abs-username="' + match.absUsername + '">';
-                html += '<option value="">-- Select Jellyfin User --</option>';
-                html += '</select>';
+                html += '<select class="emby-select match-select" ' +
+                    'data-abs-id="' + esc(match.absUserId) + '" ' +
+                    'data-abs-username="' + esc(match.absUsername || '') + '">' +
+                    '<option value="">-- Select Jellyfin User --</option></select>';
             }
 
             html += '</div>';
         });
 
+        // Save button appended SEPARATELY — not mixed into the cards html var
         container.innerHTML = html;
 
-        // Populate dropdowns with Jellyfin users
-        const selectElements = container.querySelectorAll('.match-select');
-        selectElements.forEach(function (select) {
+        // Populate dropdowns
+        container.querySelectorAll('.match-select').forEach(function (select) {
             ApiClient.getUsers().then(function (users) {
                 users.forEach(function (user) {
-                    const option = document.createElement('option');
-                    option.value = user.Id;
-                    option.textContent = user.Name;
-                    select.appendChild(option);
+                    var opt = document.createElement('option');
+                    opt.value = user.Id;
+                    opt.textContent = user.Name;
+                    select.appendChild(opt);
                 });
             });
         });
 
-        // Update matches when selection changes
+        // Checkbox / select change handlers
         container.querySelectorAll('.match-checkbox, .match-select').forEach(function (input) {
             input.addEventListener('change', function () {
-                const index = parseInt(this.dataset.index);
-                const select = this.closest('.user-match-card').querySelector('.match-select');
-                const checkbox = this.closest('.user-match-card').querySelector('.match-checkbox');
+                var idx    = parseInt(this.dataset.index);
+                var select = this.closest('.user-match-card').querySelector('.match-select');
 
-                if (this.classList.contains('match-checkbox')) {
-                    if (index >= 0 && index < userMatches.length) {
-                        userMatches[index].isSelected = this.checked;
-                    }
+                if (this.classList.contains('match-checkbox') && idx >= 0 && idx < userMatches.length) {
+                    userMatches[idx].isSelected = this.checked;
                 }
 
                 if (select && select.value) {
-                    const absId = select.dataset.absId;
-                    const absUsername = select.dataset.absUsername;
-                    const jfId = select.value;
-                    const jfUsername = select.options[select.selectedIndex].text;
-
-                    const existingMatch = userMatches.find(m => m.jellyfinUserId === jfId);
-                    if (existingMatch) {
-                        existingMatch.isSelected = true;
+                    var absId       = select.dataset.absId;
+                    var absUsername = select.dataset.absUsername;
+                    var jfId        = select.value;
+                    var jfUsername  = select.options[select.selectedIndex].text;
+                    var existing    = userMatches.find(function (m) { return m.jellyfinUserId === jfId; });
+                    if (existing) {
+                        existing.isSelected = true;
                     } else {
-                        userMatches.push({
-                            jellyfinUserId: jfId,
-                            jellyfinUsername: jfUsername,
-                            absUserId: absId,
-                            absUsername: absUsername,
-                            matchType: 'manual',
-                            isSelected: true
-                        });
+                        userMatches.push({ jellyfinUserId: jfId, jellyfinUsername: jfUsername,
+                            absUserId: absId, absUsername: absUsername, matchType: 'manual', isSelected: true });
                     }
                 }
             });
         });
 
+        // Append Save button AFTER setting innerHTML (avoids duplicate-cards bug)
         if (matches.length > 0) {
-            html += '<button is="emby-button" type="button" id="saveUserMappings" class="raised emby-button" style="margin-top: 12px;">';
-            html += '<span>Save User Mappings</span>';
-            html += '</button>';
-            container.innerHTML += html;
-
-            container.querySelector('#saveUserMappings').addEventListener('click', function () {
-                saveUserMappings(page);
-            });
+            var saveBtn = document.createElement('button');
+            saveBtn.setAttribute('is', 'emby-button');
+            saveBtn.type = 'button';
+            saveBtn.className = 'raised emby-button';
+            saveBtn.style.marginTop = '12px';
+            saveBtn.innerHTML = '<span>Save User Mappings</span>';
+            saveBtn.addEventListener('click', function () { saveUserMappings(page); });
+            container.appendChild(saveBtn);
         }
     }
 
+    // ── Save user mappings ────────────────────────────────────────────────────
+
     function saveUserMappings(page) {
-        var status = page.querySelector('#discoverStatus');
+        var status   = page.querySelector('#discoverStatus');
         var selected = userMatches.filter(function (m) { return m.isSelected && m.absUserId; });
 
         if (selected.length === 0) {
@@ -558,8 +562,7 @@
             return;
         }
 
-        status.innerHTML = '<span class="loading-spinner"></span> Saving...';
-        status.style.color = '';
+        status.innerHTML = '<span class="loading-spinner"></span> Saving\u2026';
 
         fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/SaveMappings'), {
             method: 'POST',
@@ -570,76 +573,81 @@
             },
             body: JSON.stringify({ matches: selected })
         })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
         .then(function (data) {
             status.textContent = '';
             showModal('✅', 'Saved ' + data.savedCount + ' user mapping(s).\n\nProgress sync will now use these pairings.');
-
-            // Refresh the token table to show newly mapped users
+            // Refresh token table
             ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
                 var tokenMap = {};
                 var entries = config.userTokenEntries || config.UserTokenEntries || [];
                 entries.forEach(function (e) {
                     var id  = e.userId  || e.UserId;
                     var tok = e.token   || e.Token;
-                    if (id && tok) { tokenMap[id] = tok; }
+                    if (id && tok) tokenMap[id] = tok;
                 });
                 renderUserTokenTable(page, tokenMap);
             });
         })
         .catch(function (err) {
-            console.error('Failed to save mappings:', err);
             status.textContent = '';
-            showModal('❌', 'Failed to save user mappings.\n\nCheck that the plugin is active and Jellyfin can reach the ABS server.');
+            showModal('❌', 'Failed to save user mappings.\n\n(' + err + ')');
         });
     }
+
+    // ── Save config ───────────────────────────────────────────────────────────
 
     function saveConfig(page) {
-        ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
-            // Use camelCase to match Jellyfin's JSON serializer output and avoid
-            // duplicate-property issues when the PUT body is deserialized server-side.
-            var url = page.querySelector('#absServerUrl').value.replace(/\/$/, '');
-            var token = page.querySelector('#absAdminToken').value;
-            var libIds = page.querySelector('#absLibraryIds').value;
-            var interval = parseInt(page.querySelector('#absSyncInterval').value, 10) || 10;
-            var outbound = page.querySelector('#absEnableOutbound').checked;
-            var inbound  = page.querySelector('#absEnableInbound').checked;
-            var metadata = page.querySelector('#absEnableMetadata').checked;
-            var podcasts = page.querySelector('#absEnablePodcasts').checked;
+        var url      = page.querySelector('#absServerUrl').value.trim().replace(/\/$/, '');
+        var token    = page.querySelector('#absAdminToken').value.trim();
+        var libIds   = page.querySelector('#absLibraryIds').value;
+        var interval = parseInt(page.querySelector('#absSyncInterval').value, 10) || 10;
+        var outbound = page.querySelector('#absEnableOutbound').checked;
+        var inbound  = page.querySelector('#absEnableInbound').checked;
+        var metadata = page.querySelector('#absEnableMetadata').checked;
+        var podcasts = page.querySelector('#absEnablePodcasts').checked;
 
-            var tokenEntries = [];
-            page.querySelectorAll('.abs-user-token').forEach(function (input) {
-                if (input.value) {
-                    tokenEntries.push({ userId: input.dataset.userid, token: input.value });
-                }
-            });
+        var tokenEntries = [];
+        page.querySelectorAll('.abs-user-token').forEach(function (input) {
+            if (input.value.trim()) {
+                tokenEntries.push({ userId: input.dataset.userid, token: input.value.trim() });
+            }
+        });
 
-            // Build a clean object with only camelCase keys — no PascalCase duplicates.
-            var body = {
-                absServerUrl:               url,
-                adminApiToken:              token,
-                includedLibraryIds:         libIds ? libIds.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
-                progressSyncIntervalMinutes: interval,
-                enableOutboundSync:         outbound,
-                enableInboundSync:          inbound,
-                enableMetadataProvider:     metadata,
-                enablePodcastLibraries:     podcasts,
-                userTokenEntries:           tokenEntries
-            };
+        // Post camelCase keys — Jellyfin's JSON deserializer is case-insensitive,
+        // but sending camelCase avoids any ambiguity with PascalCase duplicates.
+        var body = {
+            absServerUrl:                url,
+            adminApiToken:               token,
+            includedLibraryIds:          libIds ? libIds.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
+            progressSyncIntervalMinutes: interval,
+            enableOutboundSync:          outbound,
+            enableInboundSync:           inbound,
+            enableMetadataProvider:      metadata,
+            enablePodcastLibraries:      podcasts,
+            userTokenEntries:            tokenEntries
+        };
 
-            ApiClient.updatePluginConfiguration(getPluginId(), body).then(function () {
-                Dashboard.processPluginConfigurationUpdateResult();
-            });
+        ApiClient.updatePluginConfiguration(getPluginId(), body).then(function () {
+            Dashboard.processPluginConfigurationUpdateResult();
+        }).catch(function (err) {
+            console.error('[ABS] Failed to save configuration:', err);
+            showModal('❌', 'Failed to save configuration.\n\n(' + err + ')');
         });
     }
 
+    // ── Test Connection ───────────────────────────────────────────────────────
+
     function testConnection(page) {
-        var url = page.querySelector('#absServerUrl').value.replace(/\/$/, '');
-        var token = page.querySelector('#absAdminToken').value;
+        var url    = page.querySelector('#absServerUrl').value.trim().replace(/\/$/, '');
+        var token  = page.querySelector('#absAdminToken').value.trim();
         var status = page.querySelector('#absConnectionStatus');
 
         if (!url || !token) {
-            showModal('⚠️', 'Server URL and Admin Token are required.\n\nEnter both fields and save before testing.');
+            showModal('⚠️', 'Server URL and Admin Token are required.\n\nEnter both fields and click Save before testing.');
             return;
         }
 
@@ -653,7 +661,10 @@
                 'X-Abs-Token': token
             }
         })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
         .then(function (data) {
             status.textContent = '';
             if (data.success) {
@@ -664,15 +675,18 @@
         })
         .catch(function (err) {
             status.textContent = '';
-            showModal('❌', 'Connection failed.\n\nCould not reach the server. Check the URL and make sure Audiobookshelf is running.\n\n' + (err && err.message ? err.message : ''));
+            showModal('❌', 'Connection failed.\n\nCould not reach the server. Check the URL and make sure Audiobookshelf is running.\n\n(' + err + ')');
         });
     }
 
-    document.addEventListener('viewshow', function (e) {
-        var page = document.querySelector('#' + pageId);
-        if (!page) return;
-        if (page.dataset.absInitialized) return;
-        page.dataset.absInitialized = 'true';
+    // ── Page initialization ───────────────────────────────────────────────────
+    // Jellyfin injects the page div and then executes the script, so the DOM is
+    // already available at this point. We initialise directly rather than waiting
+    // for a viewshow event, which can be unreliable in the SPA context.
+
+    function initPage() {
+        var page = document.getElementById('audiobookshelfConfigPage');
+        if (!page) return false;
 
         loadConfig(page);
 
@@ -685,21 +699,27 @@
             saveConfig(page);
         });
 
-        page.querySelector('#discoverUsers')?.addEventListener('click', function () {
-            discoverUsers(page);
+        var discoverBtn = page.querySelector('#discoverUsers');
+        if (discoverBtn) {
+            discoverBtn.addEventListener('click', function () {
+                discoverUsers(page);
+            });
+        }
+
+        return true;
+    }
+
+    // Try immediately; fall back to viewshow if the page element isn't in the DOM yet.
+    if (!initPage()) {
+        document.addEventListener('viewshow', function onView() {
+            if (initPage()) {
+                document.removeEventListener('viewshow', onView);
+            }
         });
-    });
+    }
+
 }());
 </script>
-
-<!-- Result modal -->
-<div id="absModal" role="dialog" aria-modal="true" aria-labelledby="absModalMessage">
-    <div id="absModalBox">
-        <div id="absModalIcon"></div>
-        <div id="absModalMessage"></div>
-        <button is="emby-button" type="button" id="absModalOk" class="raised emby-button">OK</button>
-    </div>
-</div>
 
 </body>
 </html>
