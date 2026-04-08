@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix config save: use direct fetch POST to plugin config endpoint with PascalCase keys matching C# properties; fix page reload on return visit by separating listener binding from loadConfig; Save button now shows success/error modal.",
+        "checksum": "bca2a17aa4244f7c398a68b8e1c6ddda",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.7.0/Jellyfin.Plugin.Audiobookshelf_1.0.7.0.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-07T00:00:00Z",
+        "version": "1.0.7.0"
+      },
+      {
         "changelog": "Full config page rewrite: fix modal outside page div (never rendered by Jellyfin SPA); fix direct-execution init instead of unreliable viewshow event; fix duplicate match cards in Discover Users; fix saveConfig to not depend on getPluginConfiguration; camelCase body keys for Jellyfin JSON deserializer; error modals on all API calls.",
         "checksum": "a4e5a3f9606e5590821d030771502199",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.6.0/Jellyfin.Plugin.Audiobookshelf_1.0.6.0.zip",

@@ -613,27 +613,42 @@
         var tokenEntries = [];
         page.querySelectorAll('.abs-user-token').forEach(function (input) {
             if (input.value.trim()) {
-                tokenEntries.push({ userId: input.dataset.userid, token: input.value.trim() });
+                // PascalCase to match C# property names in PluginConfiguration
+                tokenEntries.push({ UserId: input.dataset.userid, Token: input.value.trim() });
             }
         });
 
-        // Post camelCase keys — Jellyfin's JSON deserializer is case-insensitive,
-        // but sending camelCase avoids any ambiguity with PascalCase duplicates.
+        // PascalCase keys match the C# property names that Jellyfin's plugin
+        // config endpoint deserializes to via System.Text.Json or XmlSerializer.
         var body = {
-            absServerUrl:                url,
-            adminApiToken:               token,
-            includedLibraryIds:          libIds ? libIds.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
-            progressSyncIntervalMinutes: interval,
-            enableOutboundSync:          outbound,
-            enableInboundSync:           inbound,
-            enableMetadataProvider:      metadata,
-            enablePodcastLibraries:      podcasts,
-            userTokenEntries:            tokenEntries
+            AbsServerUrl:                url,
+            AdminApiToken:               token,
+            IncludedLibraryIds:          libIds ? libIds.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
+            ProgressSyncIntervalMinutes: interval,
+            EnableOutboundSync:          outbound,
+            EnableInboundSync:           inbound,
+            EnableMetadataProvider:      metadata,
+            EnablePodcastLibraries:      podcasts,
+            UserTokenEntries:            tokenEntries
         };
 
-        ApiClient.updatePluginConfiguration(getPluginId(), body).then(function () {
-            Dashboard.processPluginConfigurationUpdateResult();
-        }).catch(function (err) {
+        // Use direct fetch so we can see HTTP status; ApiClient.updatePluginConfiguration
+        // can swallow non-2xx responses silently.
+        var configUrl = ApiClient.getUrl('Plugins/' + getPluginId() + '/Configuration');
+        fetch(configUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'MediaBrowser Token="' + getJellyfinToken() + '"'
+            },
+            body: JSON.stringify(body)
+        })
+        .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + r.statusText);
+            try { Dashboard.processPluginConfigurationUpdateResult(); } catch (e) {}
+            showModal('✅', 'Settings saved successfully.');
+        })
+        .catch(function (err) {
             console.error('[ABS] Failed to save configuration:', err);
             showModal('❌', 'Failed to save configuration.\n\n(' + err + ')');
         });
@@ -680,43 +695,43 @@
     }
 
     // ── Page initialization ───────────────────────────────────────────────────
-    // Jellyfin injects the page div and then executes the script, so the DOM is
-    // already available at this point. We initialise directly rather than waiting
-    // for a viewshow event, which can be unreliable in the SPA context.
+
+    function bindListeners(page) {
+        // Called once. Attaches event listeners that should not be duplicated.
+        page.querySelector('#absTestConnection').addEventListener('click', function () {
+            testConnection(page);
+        });
+        page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
+            ev.preventDefault();
+            saveConfig(page);
+        });
+        var discoverBtn = page.querySelector('#discoverUsers');
+        if (discoverBtn) {
+            discoverBtn.addEventListener('click', function () { discoverUsers(page); });
+        }
+    }
 
     function initPage() {
         var page = document.getElementById('audiobookshelfConfigPage');
         if (!page) return false;
 
-        loadConfig(page);
-
-        page.querySelector('#absTestConnection').addEventListener('click', function () {
-            testConnection(page);
-        });
-
-        page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
-            ev.preventDefault();
-            saveConfig(page);
-        });
-
-        var discoverBtn = page.querySelector('#discoverUsers');
-        if (discoverBtn) {
-            discoverBtn.addEventListener('click', function () {
-                discoverUsers(page);
-            });
+        if (!page.dataset.absListenersBound) {
+            bindListeners(page);
+            page.dataset.absListenersBound = 'true';
         }
 
+        // Always reload config — fires on first load AND on every return visit via viewshow.
+        loadConfig(page);
         return true;
     }
 
-    // Try immediately; fall back to viewshow if the page element isn't in the DOM yet.
-    if (!initPage()) {
-        document.addEventListener('viewshow', function onView() {
-            if (initPage()) {
-                document.removeEventListener('viewshow', onView);
-            }
-        });
-    }
+    // viewshow fires when Jellyfin navigates to this page (both first load and return visits).
+    // The script also runs immediately on first inject, so call initPage() both ways.
+    document.addEventListener('viewshow', function () {
+        initPage();
+    });
+
+    initPage();
 
 }());
 </script>
