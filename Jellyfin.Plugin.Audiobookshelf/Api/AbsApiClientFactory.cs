@@ -56,8 +56,9 @@ public class AbsApiClientFactory
         // Invalidate cached clients if the server URL has changed
         if (_clients.Count > 0)
         {
-            string expectedPrefix = baseUrl + ":";
-            if (_clients.Keys.Any(k => !k.StartsWith(expectedPrefix, StringComparison.Ordinal)))
+            string currentPrefix = baseUrl + ":";
+            bool hasMismatchedKeys = _clients.Keys.Any(k => !k.StartsWith(currentPrefix, StringComparison.Ordinal));
+            if (hasMismatchedKeys)
             {
                 InvalidateAll();
             }

@@ -341,15 +341,21 @@
         const url = page.querySelector('#absServerUrl').value;
         const token = page.querySelector('#absAdminToken').value;
         const status = page.querySelector('#discoverStatus');
+        const btn = page.querySelector('#discoverUsers');
 
         if (!url || !token) {
             status.textContent = 'Server URL and Admin Token are required';
             status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'Missing Information',
+                message: 'Server URL and Admin Token are required.'
+            });
             return;
         }
 
         status.innerHTML = '<span class="loading-spinner"></span> Discovering users...';
         status.style.color = '';
+        btn.disabled = true;
 
         fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/Discover?serverUrl=' + encodeURIComponent(url)), {
             method: 'GET',
@@ -360,33 +366,47 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
+            btn.disabled = false;
             userMatches = data.Matches;
             renderUserMatches(page, data.Matches);
             status.textContent = 'Found ' + data.Matches.length + ' user(s)';
             status.style.color = 'var(--success-color, green)';
+            Dashboard.alert({
+                title: 'User Discovery Complete',
+                message: 'Found ' + data.Matches.length + ' matching user(s). Review matches above and save your selections.'
+            });
         })
         .catch(function (err) {
+            btn.disabled = false;
             console.error('Failed to discover users:', err);
             status.textContent = 'Discovery failed';
             status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'Discovery Failed',
+                message: 'Failed to discover users. Check the server URL and API token.'
+            });
         });
     }
 
     function renderUserMatches(page, matches) {
         const container = page.querySelector('#userMatchesList');
+        container.innerHTML = '';
         let html = '';
 
         matches.forEach(function (match, index) {
             const cardClass = match.MatchType === 'exact' ? 'matched' : 'unmatched';
             const icon = match.MatchType === 'exact' ? '✓' : match.MatchType === 'fuzzy' ? '?' : '✗';
             const matchTypeText = match.MatchType === 'exact' ? 'Exact match' : match.MatchType === 'fuzzy' ? 'Possible match' : 'No match';
+            const jfUsername = esc(match.JellyfinUsername || 'No Jellyfin user');
+            const absUsername = esc(match.AbsUsername || '');
+            const absIdSafe = esc(match.AbsUserId || '');
 
             html += '<div class="user-match-card ' + cardClass + '">';
             html += '<span class="match-icon">' + icon + '</span>';
             html += '<div class="match-info">';
-            html += '<div><strong>' + (match.JellyfinUsername || 'No Jellyfin user') + '</strong>';
+            html += '<div><strong>' + jfUsername + '</strong>';
             if (match.AbsUsername) {
-                html += ' ↔ <strong>' + match.AbsUsername + '</strong>';
+                html += ' ↔ <strong>' + absUsername + '</strong>';
             }
             html += '</div>';
             html += '<div class="match-type">' + matchTypeText + '</div>';
@@ -395,7 +415,7 @@
             if (match.JellyfinUserId && match.AbsUserId) {
                 html += '<input type="checkbox" class="emby-checkbox match-checkbox" data-index="' + index + '" ' + (match.IsSelected ? 'checked' : '') + ' />';
             } else if (match.AbsUserId) {
-                html += '<select class="emby-select match-select" data-abs-id="' + match.AbsUserId + '" data-abs-username="' + match.AbsUsername + '">';
+                html += '<select class="emby-select match-select" data-abs-id="' + absIdSafe + '" data-abs-username="' + absUsername + '">';
                 html += '<option value="">-- Select Jellyfin User --</option>';
                 html += '</select>';
             }
@@ -403,12 +423,26 @@
             html += '</div>';
         });
 
+        if (matches.length > 0) {
+            html += '<button is="emby-button" type="button" id="saveUserMappings" class="raised emby-button" style="margin-top: 12px;">';
+            html += '<span>Save User Mappings</span>';
+            html += '</button>';
+        }
+
         container.innerHTML = html;
+
+        // Bind save button first, before any async operations
+        const saveBtn = container.querySelector('#saveUserMappings');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                saveUserMappings(page);
+            });
+        }
 
         // Populate dropdowns with Jellyfin users
         const selectElements = container.querySelectorAll('.match-select');
-        selectElements.forEach(function (select) {
-            ApiClient.getUsers().then(function (users) {
+        ApiClient.getUsers().then(function (users) {
+            selectElements.forEach(function (select) {
                 users.forEach(function (user) {
                     const option = document.createElement('option');
                     option.value = user.Id;
@@ -453,26 +487,17 @@
                 }
             });
         });
-
-        if (matches.length > 0) {
-            html += '<button is="emby-button" type="button" id="saveUserMappings" class="raised emby-button" style="margin-top: 12px;">';
-            html += '<span>Save User Mappings</span>';
-            html += '</button>';
-            container.innerHTML += html;
-
-            container.querySelector('#saveUserMappings').addEventListener('click', function () {
-                saveUserMappings(page);
-            });
-        }
     }
 
     function saveUserMappings(page) {
         const url = page.querySelector('#absServerUrl').value;
         const token = page.querySelector('#absAdminToken').value;
         const status = page.querySelector('#discoverStatus');
+        const btn = page.querySelector('#saveUserMappings');
 
         status.innerHTML = '<span class="loading-spinner"></span> Saving...';
         status.style.color = '';
+        if (btn) btn.disabled = true;
 
         fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/SaveMappings'), {
             method: 'POST',
@@ -484,8 +509,13 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
+            if (btn) btn.disabled = false;
             status.textContent = 'Saved ' + data.SavedCount + ' mapping(s)';
             status.style.color = 'var(--success-color, green)';
+            Dashboard.alert({
+                title: 'User Mappings Saved',
+                message: 'Successfully saved ' + data.SavedCount + ' user mapping(s).'
+            });
 
             // Refresh the token table to show newly mapped users
             ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
@@ -493,9 +523,14 @@
             });
         })
         .catch(function (err) {
+            if (btn) btn.disabled = false;
             console.error('Failed to save mappings:', err);
             status.textContent = 'Save failed';
             status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'Save Failed',
+                message: 'Failed to save user mappings. Check server logs for details.'
+            });
         });
     }
 
@@ -532,14 +567,21 @@
         const url = page.querySelector('#absServerUrl').value.replace(/\/$/, '');
         const token = page.querySelector('#absAdminToken').value;
         const status = page.querySelector('#absConnectionStatus');
-        status.textContent = 'Testing…';
-        status.style.color = '';
+        const btn = page.querySelector('#absTestConnection');
 
         if (!url || !token) {
             status.textContent = 'Server URL and Admin Token are required';
             status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'Missing Information',
+                message: 'Server URL and Admin Token are required.'
+            });
             return;
         }
+
+        status.textContent = 'Testing…';
+        status.style.color = '';
+        btn.disabled = true;
 
         fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/TestConnection?serverUrl=' + encodeURIComponent(url)), {
             method: 'GET',
@@ -550,22 +592,36 @@
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
+            btn.disabled = false;
             if (data.Success) {
                 status.style.color = 'var(--success-color, green)';
                 status.textContent = '✓ Connected as ' + (data.Username || 'unknown');
+                Dashboard.alert({
+                    title: 'Connection Successful',
+                    message: 'Connected to Audiobookshelf server as ' + (data.Username || 'unknown') + '.'
+                });
             } else {
                 status.style.color = 'var(--error-color, red)';
                 status.textContent = '✗ ' + (data.Error || 'Connection failed');
+                Dashboard.alert({
+                    title: 'Connection Failed',
+                    message: data.Error || 'Connection failed. Check URL and token.'
+                });
             }
         })
-        .catch(function () {
+        .catch(function (err) {
+            btn.disabled = false;
             status.style.color = 'var(--error-color, red)';
             status.textContent = '✗ Connection failed — check URL and token';
+            Dashboard.alert({
+                title: 'Connection Failed',
+                message: 'Could not connect to the Audiobookshelf server. Check URL and token.'
+            });
         });
     }
 
-    document.addEventListener('viewshow', function (e) {
-        const page = e.detail.getAttribute ? e.detail : document.querySelector('#' + pageId);
+    document.addEventListener('pageshow', function (e) {
+        var page = document.querySelector('#' + pageId);
         if (!page) return;
 
         loadConfig(page);

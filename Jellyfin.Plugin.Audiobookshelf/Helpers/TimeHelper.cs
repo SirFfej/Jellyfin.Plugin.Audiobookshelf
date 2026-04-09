@@ -10,7 +10,25 @@ public static class TimeHelper
 {
     /// <summary>Converts seconds (ABS) to ticks (Jellyfin).</summary>
     public static long SecondsToTicks(double seconds)
-        => (long)(seconds * TimeSpan.TicksPerSecond);
+    {
+        if (double.IsNaN(seconds) || double.IsInfinity(seconds))
+        {
+            return 0;
+        }
+
+        double ticks = seconds * TimeSpan.TicksPerSecond;
+        if (ticks > long.MaxValue)
+        {
+            return long.MaxValue;
+        }
+
+        if (ticks < long.MinValue)
+        {
+            return long.MinValue;
+        }
+
+        return (long)ticks;
+    }
 
     /// <summary>Converts ticks (Jellyfin) to seconds (ABS).</summary>
     public static double TicksToSeconds(long ticks)

@@ -83,7 +83,16 @@ public sealed partial class ProgressSyncService : IDisposable
                 _pending.TryRemove(debounceKey, out _);
 
                 var client = _clientFactory.GetClientForUser(userId);
-                bool ok = await client.UpdateProgressAsync(absItemId, currentSecs, duration, isFinished, CancellationToken.None)
+                bool ok = await client.UpdateProgressAsync(
+                    absItemId,
+                    currentSecs,
+                    duration,
+                    isFinished,
+                    hideFromContinueListening: false,
+                    markAsFinishedTimeRemaining: 10,
+                    lastUpdate: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    episodeId: null,
+                    CancellationToken.None)
                     .ConfigureAwait(false);
 
                 if (!ok)
