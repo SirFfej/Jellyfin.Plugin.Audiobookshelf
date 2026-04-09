@@ -10,7 +10,7 @@
     "versions": [
       {
         "changelog": "Fix settings persistence: use pageshow event instead of unreliable viewshow; fix popup alerts for Test Connection, User Discovery, and Save Mappings; fix XSS vulnerability in user matching UI; fix race condition in renderUserMatches; align with Audiobookshelf API (episode support, complete progress payloads, session sync).",
-        "checksum": "08c89ebe10fdb9531ac430c4191bb750",
+        "checksum": "7024ac1dd8c7796c6992146872620194",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.8.0/Jellyfin.Plugin.Audiobookshelf_1.0.8.0.zip",
         "targetAbi": "10.11.3.0",
         "timestamp": "2026-04-08T00:00:00Z",

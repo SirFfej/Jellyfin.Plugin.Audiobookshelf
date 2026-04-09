@@ -158,7 +158,7 @@ public class UserDiscoveryController : ControllerBase
             if (match.AbsUser != null)
             {
                 dto.AbsUserId = match.AbsUser.Id;
-                dto.AbsUsername = match.AbsUser.Username;
+                dto.AbsUsername = match.AbsUser.Username ?? string.Empty;
             }
 
             dtos.Add(dto);

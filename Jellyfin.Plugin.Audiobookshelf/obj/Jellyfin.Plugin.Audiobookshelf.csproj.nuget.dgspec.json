@@ -1,25 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj": {}
+    "/home/sirffej/Documents/CodeProjects/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf.csproj": {}
   },
   "projects": {
-    "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj": {
-      "version": "1.0.0",
+    "/home/sirffej/Documents/CodeProjects/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf.csproj": {
+      "version": "1.0.8",
       "restore": {
-        "projectUniqueName": "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj",
+        "projectUniqueName": "/home/sirffej/Documents/CodeProjects/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf.csproj",
         "projectName": "Jellyfin.Plugin.Audiobookshelf",
-        "projectPath": "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf.csproj",
-        "packagesPath": "C:\\Users\\SirFfej\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\SirFfej\\CodeEtAl\\Mine-Modified\\Jellyfin.Plugin.Audiobookshelf\\Jellyfin.Plugin.Audiobookshelf\\obj\\",
+        "projectPath": "/home/sirffej/Documents/CodeProjects/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf.csproj",
+        "packagesPath": "/home/sirffej/.nuget/packages/",
+        "outputPath": "/home/sirffej/Documents/CodeProjects/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\SirFfej\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/sirffej/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
+          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -36,7 +37,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "10.0.200"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -45,20 +46,20 @@
             "Jellyfin.Controller": {
               "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "target": "Package",
-              "version": "[10.10.7, )"
+              "version": "[10.11.3, )"
             },
             "Jellyfin.Model": {
               "include": "Compile, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "target": "Package",
-              "version": "[10.10.7, )"
+              "version": "[10.11.3, )"
             },
             "Microsoft.Extensions.Caching.Memory": {
               "target": "Package",
-              "version": "[9.0.0, )"
+              "version": "[9.0.11, )"
             },
             "Microsoft.Extensions.Http": {
               "target": "Package",
-              "version": "[9.0.0, )"
+              "version": "[9.0.11, )"
             }
           },
           "imports": [
@@ -80,10 +81,6 @@
             {
               "name": "Microsoft.NETCore.App.Ref",
               "version": "[9.0.14, 9.0.14]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[9.0.14, 9.0.14]"
             }
           ],
           "frameworkReferences": {
@@ -94,7 +91,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.105/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

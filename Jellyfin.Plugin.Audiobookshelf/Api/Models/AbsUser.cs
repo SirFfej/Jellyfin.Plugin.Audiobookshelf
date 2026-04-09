@@ -65,33 +65,43 @@ public class AbsUser
 /// </summary>
 public class AbsUserPermissions
 {
+    /// <summary>Gets or sets whether user can download.</summary>
     [JsonPropertyName("download")]
     public bool CanDownload { get; set; }
 
+    /// <summary>Gets or sets whether user can update.</summary>
     [JsonPropertyName("update")]
     public bool CanUpdate { get; set; }
 
+    /// <summary>Gets or sets whether user can delete.</summary>
     [JsonPropertyName("delete")]
     public bool CanDelete { get; set; }
 
+    /// <summary>Gets or sets whether user can upload.</summary>
     [JsonPropertyName("upload")]
     public bool CanUpload { get; set; }
 
+    /// <summary>Gets or sets whether user can access explicit content.</summary>
     [JsonPropertyName("accessExplicitContent")]
     public bool CanAccessExplicitContent { get; set; }
 
+    /// <summary>Gets or sets whether user can access all libraries.</summary>
     [JsonPropertyName("accessAllLibraries")]
     public bool CanAccessAllLibraries { get; set; }
 
+    /// <summary>Gets or sets whether user can access all tags.</summary>
     [JsonPropertyName("accessAllTags")]
     public bool CanAccessAllTags { get; set; }
 
+    /// <summary>Gets or sets whether user can create e-reader devices.</summary>
     [JsonPropertyName("createEreader")]
     public bool CanCreateEReader { get; set; }
 
+    /// <summary>Gets or sets the list of accessible library IDs.</summary>
     [JsonPropertyName("librariesAccessible")]
     public string[]? LibrariesAccessible { get; set; }
 
+    /// <summary>Gets or sets the selected item tags.</summary>
     [JsonPropertyName("itemTagsSelected")]
     public string[]? ItemTagsSelected { get; set; }
 }

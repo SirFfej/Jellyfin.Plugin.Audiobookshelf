@@ -204,7 +204,11 @@ public partial class OutboundSyncTask : IScheduledTask
                 currentSecs,
                 duration,
                 userData.Played,
-                ct).ConfigureAwait(false);
+                hideFromContinueListening: false,
+                markAsFinishedTimeRemaining: 10,
+                lastUpdate: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                episodeId: null,
+                ct: ct).ConfigureAwait(false);
 
             if (ok)
             {

@@ -193,7 +193,7 @@ public partial class InboundSyncTask : IScheduledTask
                 continue;
             }
 
-            var absProgress = await absClient.GetProgressAsync(absItemId!, ct).ConfigureAwait(false);
+            var absProgress = await absClient.GetProgressAsync(absItemId!, ct: ct).ConfigureAwait(false);
             if (absProgress is null)
             {
                 continue;
