@@ -16,6 +16,18 @@ public class AbsMediaProgress
     [JsonPropertyName("libraryItemId")]
     public string LibraryItemId { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the episode ID for podcast episodes.</summary>
+    [JsonPropertyName("episodeId")]
+    public string? EpisodeId { get; set; }
+
+    /// <summary>Gets or sets the media item ID.</summary>
+    [JsonPropertyName("mediaItemId")]
+    public string? MediaItemId { get; set; }
+
+    /// <summary>Gets or sets the media item type: "book" or "podcastEpisode".</summary>
+    [JsonPropertyName("mediaItemType")]
+    public string? MediaItemType { get; set; }
+
     /// <summary>Gets or sets the total duration in seconds (from item metadata).</summary>
     [JsonPropertyName("duration")]
     public double Duration { get; set; }
@@ -32,9 +44,25 @@ public class AbsMediaProgress
     [JsonPropertyName("isFinished")]
     public bool IsFinished { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether to hide from continue listening.</summary>
+    [JsonPropertyName("hideFromContinueListening")]
+    public bool HideFromContinueListening { get; set; }
+
+    /// <summary>Gets or sets the ebook location for ebook progress.</summary>
+    [JsonPropertyName("ebookLocation")]
+    public string? EbookLocation { get; set; }
+
+    /// <summary>Gets or sets the ebook progress (0.0–1.0).</summary>
+    [JsonPropertyName("ebookProgress")]
+    public double EbookProgress { get; set; }
+
     /// <summary>Gets or sets the Unix epoch milliseconds of the last update.</summary>
     [JsonPropertyName("lastUpdate")]
     public long LastUpdate { get; set; }
+
+    /// <summary>Gets or sets the Unix epoch milliseconds when playback started.</summary>
+    [JsonPropertyName("startedAt")]
+    public long? StartedAt { get; set; }
 
     /// <summary>Gets or sets the Unix epoch milliseconds when the item was finished (null if not finished).</summary>
     [JsonPropertyName("finishedAt")]

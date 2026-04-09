@@ -207,6 +207,12 @@ public partial class InboundSyncTask : IScheduledTask
 
             DateTime absLastUpdate = TimeHelper.FromUnixMs(absProgress.LastUpdate);
 
+            // Skip if marked as hidden from continue listening
+            if (absProgress.HideFromContinueListening)
+            {
+                continue;
+            }
+
             // Last-write-wins: only update Jellyfin if ABS is newer
             if (jellyfinUserData.LastPlayedDate.HasValue
                 && jellyfinUserData.LastPlayedDate.Value >= absLastUpdate)

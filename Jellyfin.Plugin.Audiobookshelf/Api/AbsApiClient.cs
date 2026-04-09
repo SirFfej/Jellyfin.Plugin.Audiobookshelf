@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -112,31 +113,65 @@ public class AbsApiClient
     /// Returns the current user's listening progress for a library item.
     /// Not cached — always fetches fresh data.
     /// </summary>
-    public Task<AbsMediaProgress?> GetProgressAsync(string libraryItemId, CancellationToken ct = default)
-        => GetAsync<AbsMediaProgress>($"api/me/progress/{libraryItemId}", ct);
+    /// <param name="libraryItemId">The ABS library item ID.</param>
+    /// <param name="episodeId">Optional episode ID for podcasts.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Progress data or null if not found.</returns>
+    public Task<AbsMediaProgress?> GetProgressAsync(string libraryItemId, string? episodeId = null, CancellationToken ct = default)
+    {
+        var url = episodeId != null
+            ? $"api/me/progress/{libraryItemId}/{episodeId}"
+            : $"api/me/progress/{libraryItemId}";
+        return GetAsync<AbsMediaProgress>(url, ct);
+    }
 
     /// <summary>
     /// Updates the current user's listening progress for a library item.
     /// </summary>
+    /// <param name="libraryItemId">The ABS library item ID.</param>
+    /// <param name="currentTime">Current playback position in seconds.</param>
+    /// <param name="duration">Total duration in seconds.</param>
+    /// <param name="isFinished">Whether the item is marked as finished.</param>
+    /// <param name="hideFromContinueListening">Whether to hide from continue listening.</param>
+    /// <param name="markAsFinishedTimeRemaining">Seconds remaining to auto-mark as finished (default 10).</param>
+    /// <param name="lastUpdate">Optional Unix ms timestamp for local sync.</param>
+    /// <param name="episodeId">Optional episode ID for podcasts.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True if update succeeded.</returns>
     public async Task<bool> UpdateProgressAsync(
         string libraryItemId,
         double currentTime,
         double duration,
         bool isFinished,
+        bool hideFromContinueListening = false,
+        int markAsFinishedTimeRemaining = 10,
+        long? lastUpdate = null,
+        string? episodeId = null,
         CancellationToken ct = default)
     {
-        var payload = new
+        var payload = new Dictionary<string, object?>
         {
-            currentTime,
-            duration,
-            isFinished,
-            progress = duration > 0 ? currentTime / duration : 0
+            ["currentTime"] = currentTime,
+            ["duration"] = duration,
+            ["isFinished"] = isFinished,
+            ["progress"] = duration > 0 ? currentTime / duration : 0,
+            ["hideFromContinueListening"] = hideFromContinueListening,
+            ["markAsFinishedTimeRemaining"] = markAsFinishedTimeRemaining
         };
+
+        if (lastUpdate.HasValue)
+        {
+            payload["lastUpdate"] = lastUpdate.Value;
+        }
+
+        var url = episodeId != null
+            ? $"api/me/progress/{libraryItemId}/{episodeId}"
+            : $"api/me/progress/{libraryItemId}";
 
         try
         {
             using var response = await _http
-                .PatchAsJsonAsync($"api/me/progress/{libraryItemId}", payload, JsonOptions, ct)
+                .PatchAsJsonAsync(url, payload, JsonOptions, ct)
                 .ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
@@ -146,6 +181,40 @@ public class AbsApiClient
             return false;
         }
     }
+
+    /// <summary>
+    /// Batch updates progress for multiple items.
+    /// Used for local sync with lastUpdate timestamps.
+    /// </summary>
+    /// <param name="updates">Array of progress update payloads.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True if batch update succeeded.</returns>
+    public async Task<bool> BatchUpdateProgressAsync(
+        IEnumerable<ProgressBatchItem> updates,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _http
+                .PatchAsJsonAsync("api/me/progress/batch/update", updates, JsonOptions, ct)
+                .ConfigureAwait(false);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to batch update ABS progress");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Gets all items currently in progress for the user.
+    /// </summary>
+    /// <param name="limit">Maximum number of items to return (default 25).</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Items in progress response.</returns>
+    public async Task<AbsItemsInProgressResponse?> GetItemsInProgressAsync(int limit = 25, CancellationToken ct = default)
+        => await GetAsync<AbsItemsInProgressResponse>($"api/me/items-in-progress?limit={limit}", ct).ConfigureAwait(false);
 
     // -------------------------------------------------------------------------
     // Playback sessions
@@ -198,9 +267,16 @@ public class AbsApiClient
         string sessionId,
         double currentTime,
         double timeListened,
+        double duration = 0,
         CancellationToken ct = default)
     {
-        var payload = new { currentTime, timeListened, duration = 0 };
+        var payload = new SessionSyncPayload
+        {
+            CurrentTime = currentTime,
+            TimeListened = timeListened,
+            Duration = duration
+        };
+
         try
         {
             using var response = await _http
@@ -224,7 +300,12 @@ public class AbsApiClient
         double timeListened,
         CancellationToken ct = default)
     {
-        var payload = new { currentTime, timeListened };
+        var payload = new SessionClosePayload
+        {
+            CurrentTime = currentTime,
+            TimeListened = timeListened
+        };
+
         try
         {
             using var response = await _http
@@ -245,6 +326,38 @@ public class AbsApiClient
     /// </summary>
     public async Task<AbsOpenSessionsResponse?> GetOpenSessionsAsync(CancellationToken ct = default)
         => await GetAsync<AbsOpenSessionsResponse>("api/sessions/open", ct).ConfigureAwait(false);
+
+    /// <summary>
+    /// Syncs a local session (for mobile/offline sync).
+    /// </summary>
+    public async Task<bool> SyncLocalSessionAsync(
+        string libraryItemId,
+        double currentTime,
+        double duration,
+        long lastUpdate,
+        CancellationToken ct = default)
+    {
+        var payload = new LocalSessionPayload
+        {
+            LibraryItemId = libraryItemId,
+            CurrentTime = currentTime,
+            Duration = duration,
+            LastUpdate = lastUpdate
+        };
+
+        try
+        {
+            using var response = await _http
+                .PostAsJsonAsync("api/session/local", payload, JsonOptions, ct)
+                .ConfigureAwait(false);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to sync local ABS session for item {ItemId}", libraryItemId);
+            return false;
+        }
+    }
 
     // -------------------------------------------------------------------------
     // Identity / connection test
@@ -328,4 +441,118 @@ public class AbsAllUsersResponse
     /// <summary>Gets or sets the list of all users.</summary>
     [JsonPropertyName("users")]
     public AbsUser[] Users { get; set; } = [];
+}
+
+/// <summary>
+/// Response from <c>GET /api/me/items-in-progress</c>.
+/// </summary>
+public class AbsItemsInProgressResponse
+{
+    /// <summary>Gets or sets the library items in progress.</summary>
+    [JsonPropertyName("libraryItems")]
+    public AbsLibraryItem[] LibraryItems { get; set; } = [];
+}
+
+/// <summary>
+/// Payload for batch progress updates via <c>PATCH /api/me/progress/batch/update</c>.
+/// </summary>
+public class ProgressBatchItem
+{
+    /// <summary>Gets or sets the library item ID.</summary>
+    [JsonPropertyName("libraryItemId")]
+    public string LibraryItemId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the episode ID for podcasts (optional).</summary>
+    [JsonPropertyName("episodeId")]
+    public string? EpisodeId { get; set; }
+
+    /// <summary>Gets or sets the current playback position in seconds.</summary>
+    [JsonPropertyName("currentTime")]
+    public double CurrentTime { get; set; }
+
+    /// <summary>Gets or sets the duration in seconds.</summary>
+    [JsonPropertyName("duration")]
+    public double Duration { get; set; }
+
+    /// <summary>Gets or sets the fractional progress (0.0–1.0).</summary>
+    [JsonPropertyName("progress")]
+    public double Progress { get; set; }
+
+    /// <summary>Gets or sets whether the item is finished.</summary>
+    [JsonPropertyName("isFinished")]
+    public bool IsFinished { get; set; }
+
+    /// <summary>Gets or sets the Unix ms timestamp for local sync.</summary>
+    [JsonPropertyName("lastUpdate")]
+    public long LastUpdate { get; set; }
+}
+
+/// <summary>
+/// Payload for session sync via <c>POST /api/session/:id/sync</c>.
+/// </summary>
+public class SessionSyncPayload
+{
+    /// <summary>Gets or sets the current playback position in seconds.</summary>
+    [JsonPropertyName("currentTime")]
+    public double CurrentTime { get; set; }
+
+    /// <summary>Gets or sets the total time listened in seconds.</summary>
+    [JsonPropertyName("timeListened")]
+    public double TimeListened { get; set; }
+
+    /// <summary>Gets or sets the total duration in seconds.</summary>
+    [JsonPropertyName("duration")]
+    public double Duration { get; set; }
+
+    /// <summary>Gets or sets the display title (optional).</summary>
+    [JsonPropertyName("displayTitle")]
+    public string? DisplayTitle { get; set; }
+
+    /// <summary>Gets or sets the play method (optional).</summary>
+    [JsonPropertyName("playMethod")]
+    public string? PlayMethod { get; set; }
+}
+
+/// <summary>
+/// Payload for session close via <c>POST /api/session/:id/close</c>.
+/// </summary>
+public class SessionClosePayload
+{
+    /// <summary>Gets or sets the current playback position in seconds.</summary>
+    [JsonPropertyName("currentTime")]
+    public double CurrentTime { get; set; }
+
+    /// <summary>Gets or sets the total time listened in seconds.</summary>
+    [JsonPropertyName("timeListened")]
+    public double TimeListened { get; set; }
+}
+
+/// <summary>
+/// Payload for local session sync via <c>POST /api/session/local</c>.
+/// </summary>
+public class LocalSessionPayload
+{
+    /// <summary>Gets or sets the library item ID.</summary>
+    [JsonPropertyName("libraryItemId")]
+    public string LibraryItemId { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the episode ID for podcasts (optional).</summary>
+    [JsonPropertyName("episodeId")]
+    public string? EpisodeId { get; set; }
+
+    /// <summary>Gets or sets the current playback position in seconds.</summary>
+    [JsonPropertyName("currentTime")]
+    public double CurrentTime { get; set; }
+
+    /// <summary>Gets or sets the duration in seconds.</summary>
+    [JsonPropertyName("duration")]
+    public double Duration { get; set; }
+
+    /// <summary>Gets or sets the Unix ms timestamp of the update.</summary>
+    [JsonPropertyName("lastUpdate")]
+    public long LastUpdate { get; set; }
+
+    /// <summary>Gets or sets whether the item is finished.</summary>
+    [JsonPropertyName("isFinished")]
+    public bool IsFinished { get; set; }
 }

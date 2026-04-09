@@ -385,16 +385,24 @@
     // ── Discover Users ────────────────────────────────────────────────────────
 
     function discoverUsers(page) {
-        var url    = page.querySelector('#absServerUrl').value.trim();
-        var token  = page.querySelector('#absAdminToken').value.trim();
-        var status = page.querySelector('#discoverStatus');
+        const url = page.querySelector('#absServerUrl').value;
+        const token = page.querySelector('#absAdminToken').value;
+        const status = page.querySelector('#discoverStatus');
+        const btn = page.querySelector('#discoverUsers');
 
         if (!url || !token) {
-            showModal('⚠️', 'Server URL and Admin Token are required.\n\nEnter both fields and click Save before discovering users.');
+            status.textContent = 'Server URL and Admin Token are required';
+            status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'Missing Information',
+                message: 'Server URL and Admin Token are required.'
+            });
             return;
         }
 
-        status.innerHTML = '<span class="abs-spinner"></span>Discovering users\u2026';
+        status.innerHTML = '<span class="loading-spinner"></span> Discovering users...';
+        status.style.color = '';
+        btn.disabled = true;
 
         fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/Discover?serverUrl=' + encodeURIComponent(url)), {
             method: 'GET',
@@ -406,109 +414,151 @@
         })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (data) {
-            userMatches = data.matches || data.Matches || [];
-            renderUserMatches(page, userMatches);
-            status.textContent = 'Found ' + userMatches.length + ' user(s)';
-            if (userMatches.length === 0) {
-                showModal('ℹ️', 'No users found.\n\nNo ABS users could be matched to Jellyfin users.\nMake sure both servers have users with matching names.');
-            }
+            btn.disabled = false;
+            userMatches = data.Matches;
+            renderUserMatches(page, data.Matches);
+            status.textContent = 'Found ' + data.Matches.length + ' user(s)';
+            status.style.color = 'var(--success-color, green)';
+            Dashboard.alert({
+                title: 'User Discovery Complete',
+                message: 'Found ' + data.Matches.length + ' matching user(s). Review matches above and save your selections.'
+            });
         })
         .catch(function (err) {
-            status.textContent = '';
-            showModal('❌', 'User discovery failed.\n\nCheck the server URL, admin token, and server availability.\n\n(' + err + ')');
+            btn.disabled = false;
+            console.error('Failed to discover users:', err);
+            status.textContent = 'Discovery failed';
+            status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'Discovery Failed',
+                message: 'Failed to discover users. Check the server URL and API token.'
+            });
         });
     }
 
     function renderUserMatches(page, matches) {
-        var container = page.querySelector('#userMatchesList');
-        var html = '';
+        const container = page.querySelector('#userMatchesList');
+        container.innerHTML = '';
+        let html = '';
 
         matches.forEach(function (match, index) {
-            var isExact  = match.matchType === 'exact'  || match.MatchType === 'exact';
-            var isFuzzy  = match.matchType === 'fuzzy'  || match.MatchType === 'fuzzy';
-            var cardClass = isExact ? 'matched' : 'unmatched';
-            var icon      = isExact ? '✓' : isFuzzy ? '?' : '✗';
-            var typeText  = isExact ? 'Exact match' : isFuzzy ? 'Possible match' : 'No match';
-            var jfId      = match.jellyfinUserId  || match.JellyfinUserId  || '';
-            var jfName    = match.jellyfinUsername || match.JellyfinUsername || 'No Jellyfin user';
-            var absId     = match.absUserId        || match.AbsUserId       || '';
-            var absName   = match.absUsername      || match.AbsUsername     || '';
-            var selected  = match.isSelected       || match.IsSelected      || false;
+            const cardClass = match.MatchType === 'exact' ? 'matched' : 'unmatched';
+            const icon = match.MatchType === 'exact' ? '✓' : match.MatchType === 'fuzzy' ? '?' : '✗';
+            const matchTypeText = match.MatchType === 'exact' ? 'Exact match' : match.MatchType === 'fuzzy' ? 'Possible match' : 'No match';
+            const jfUsername = esc(match.JellyfinUsername || 'No Jellyfin user');
+            const absUsername = esc(match.AbsUsername || '');
+            const absIdSafe = esc(match.AbsUserId || '');
 
-            html += '<div class="abs-match-card ' + cardClass + '">' +
-                '<span class="abs-match-icon">' + icon + '</span>' +
-                '<div class="abs-match-info">' +
-                '<div><strong>' + esc(jfName) + '</strong>';
-            if (absName) html += ' ↔ <strong>' + esc(absName) + '</strong>';
-            html += '</div><div class="abs-match-type">' + typeText + '</div></div>';
-
-            if (jfId && absId) {
-                html += '<input type="checkbox" is="emby-checkbox" class="emby-checkbox abs-match-checkbox" ' +
-                    'data-index="' + index + '" ' + (selected ? 'checked' : '') + ' />';
-            } else if (absId) {
-                html += '<select class="emby-select abs-match-select" data-abs-id="' + esc(absId) +
-                    '" data-abs-username="' + esc(absName) + '" data-index="' + index + '">' +
-                    '<option value="">-- Select Jellyfin User --</option></select>';
+            html += '<div class="user-match-card ' + cardClass + '">';
+            html += '<span class="match-icon">' + icon + '</span>';
+            html += '<div class="match-info">';
+            html += '<div><strong>' + jfUsername + '</strong>';
+            if (match.AbsUsername) {
+                html += ' ↔ <strong>' + absUsername + '</strong>';
             }
+            html += '</div>';
+            html += '<div class="match-type">' + matchTypeText + '</div>';
+            html += '</div>';
+
+            if (match.JellyfinUserId && match.AbsUserId) {
+                html += '<input type="checkbox" class="emby-checkbox match-checkbox" data-index="' + index + '" ' + (match.IsSelected ? 'checked' : '') + ' />';
+            } else if (match.AbsUserId) {
+                html += '<select class="emby-select match-select" data-abs-id="' + absIdSafe + '" data-abs-username="' + absUsername + '">';
+                html += '<option value="">-- Select Jellyfin User --</option>';
+                html += '</select>';
+            }
+
             html += '</div>';
         });
 
+        if (matches.length > 0) {
+            html += '<button is="emby-button" type="button" id="saveUserMappings" class="raised emby-button" style="margin-top: 12px;">';
+            html += '<span>Save User Mappings</span>';
+            html += '</button>';
+        }
+
         container.innerHTML = html;
 
-        container.querySelectorAll('.abs-match-select').forEach(function (select) {
-            ApiClient.getUsers().then(function (users) {
-                users.forEach(function (u) {
-                    var opt = document.createElement('option');
-                    opt.value = u.Id; opt.textContent = u.Name;
-                    select.appendChild(opt);
+        // Bind save button first, before any async operations
+        const saveBtn = container.querySelector('#saveUserMappings');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                saveUserMappings(page);
+            });
+        }
+
+        // Populate dropdowns with Jellyfin users
+        const selectElements = container.querySelectorAll('.match-select');
+        ApiClient.getUsers().then(function (users) {
+            selectElements.forEach(function (select) {
+                users.forEach(function (user) {
+                    const option = document.createElement('option');
+                    option.value = user.Id;
+                    option.textContent = user.Name;
+                    select.appendChild(option);
                 });
             });
         });
 
-        container.querySelectorAll('.abs-match-checkbox, .abs-match-select').forEach(function (input) {
+        container.querySelectorAll('.match-checkbox, .match-select').forEach(function (input) {
             input.addEventListener('change', function () {
-                var idx = parseInt(this.dataset.index, 10);
-                if (this.classList.contains('abs-match-checkbox') && idx >= 0 && idx < userMatches.length) {
-                    userMatches[idx].isSelected = this.checked;
+                const index = parseInt(this.dataset.index);
+                const select = this.closest('.user-match-card').querySelector('.match-select');
+                const checkbox = this.closest('.user-match-card').querySelector('.match-checkbox');
+
+                if (this.classList.contains('match-checkbox')) {
+                    if (index >= 0 && index < userMatches.length) {
+                        userMatches[index].IsSelected = this.checked;
+                    }
                 }
-                if (this.classList.contains('abs-match-select') && this.value) {
-                    var absId    = this.dataset.absId;
-                    var absUname = this.dataset.absUsername;
-                    var jfId2    = this.value;
-                    var jfUname  = this.options[this.selectedIndex].text;
-                    var existing = userMatches.find(function (m) { return (m.jellyfinUserId || m.JellyfinUserId) === jfId2; });
-                    if (existing) { existing.isSelected = true; }
-                    else { userMatches.push({ jellyfinUserId: jfId2, jellyfinUsername: jfUname, absUserId: absId, absUsername: absUname, matchType: 'manual', isSelected: true }); }
+
+                if (select && select.value) {
+                    const absId = select.dataset.absId;
+                    const absUsername = select.dataset.absUsername;
+                    const jfId = select.value;
+                    const jfUsername = select.options[select.selectedIndex].text;
+
+                    const existingMatch = userMatches.find(m => m.JellyfinUserId === jfId);
+                    if (existingMatch) {
+                        existingMatch.IsSelected = true;
+                    } else {
+                        userMatches.push({
+                            JellyfinUserId: jfId,
+                            JellyfinUsername: jfUsername,
+                            AbsUserId: absId,
+                            AbsUsername: absUsername,
+                            MatchType: 'manual',
+                            IsSelected: true
+                        });
+                    }
                 }
             });
         });
-
-        if (matches.length > 0) {
-            var btn = document.createElement('button');
-            btn.setAttribute('is', 'emby-button');
-            btn.type = 'button';
-            btn.className = 'raised emby-button';
-            btn.style.marginTop = '12px';
-            btn.innerHTML = '<span>Save User Mappings</span>';
-            btn.addEventListener('click', function () { saveUserMappings(page); });
-            container.appendChild(btn);
-        }
     }
 
-    // ── Save user mappings ────────────────────────────────────────────────────
-
     function saveUserMappings(page) {
-        var status   = page.querySelector('#discoverStatus');
+        const url = page.querySelector('#absServerUrl').value;
+        const token = page.querySelector('#absAdminToken').value;
+        const status = page.querySelector('#discoverStatus');
+        const btn = page.querySelector('#saveUserMappings');
+
         var selected = userMatches.filter(function (m) {
-            return (m.isSelected || m.IsSelected) && (m.absUserId || m.AbsUserId);
+            return (m.IsSelected || m.isSelected) && (m.AbsUserId || m.absUserId);
         });
 
         if (selected.length === 0) {
-            showModal('⚠️', 'No mappings selected.\n\nCheck at least one user pairing before saving.');
+            status.textContent = 'No mappings selected';
+            status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'No Mappings Selected',
+                message: 'Check at least one user pairing before saving.'
+            });
             return;
         }
 
-        status.innerHTML = '<span class="abs-spinner"></span>Saving\u2026';
+        status.innerHTML = '<span class="loading-spinner"></span> Saving...';
+        status.style.color = '';
+        if (btn) btn.disabled = true;
 
         fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/SaveMappings'), {
             method: 'POST',
@@ -517,27 +567,31 @@
                 'Accept': 'application/json',
                 'Authorization': 'MediaBrowser Token="' + getJellyfinToken() + '"'
             },
-            body: JSON.stringify({ matches: selected })
+            body: JSON.stringify({ Matches: selected })
         })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (data) {
-            status.textContent = '';
-            var count = data.savedCount || data.SavedCount || 0;
-            showModal('✅', 'Saved ' + count + ' user mapping(s).\n\nProgress sync will now use these pairings.');
-            ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
-                var tokenMap = {};
-                var entries = config.UserTokenEntries || config.userTokenEntries || [];
-                entries.forEach(function (e) {
-                    var id  = e.UserId  || e.userId;
-                    var tok = e.Token   || e.token;
-                    if (id && tok) tokenMap[id] = tok;
-                });
-                renderUserTokenTable(page, tokenMap);
+            if (btn) btn.disabled = false;
+            status.textContent = 'Saved ' + data.SavedCount + ' mapping(s)';
+            status.style.color = 'var(--success-color, green)';
+            Dashboard.alert({
+                title: 'User Mappings Saved',
+                message: 'Successfully saved ' + data.SavedCount + ' user mapping(s).'
+            });
+
+            ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
+                renderUserTokenTable(page, config.UserTokenMap || {});
             });
         })
         .catch(function (err) {
-            status.textContent = '';
-            showModal('❌', 'Failed to save user mappings.\n\n(' + err + ')');
+            if (btn) btn.disabled = false;
+            console.error('Failed to save mappings:', err);
+            status.textContent = 'Save failed';
+            status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'Save Failed',
+                message: 'Failed to save user mappings. Check server logs for details.'
+            });
         });
     }
 
@@ -598,16 +652,24 @@
     // ── Test Connection ───────────────────────────────────────────────────────
 
     function testConnection(page) {
-        var url    = page.querySelector('#absServerUrl').value.trim().replace(/\/$/, '');
-        var token  = page.querySelector('#absAdminToken').value.trim();
-        var status = page.querySelector('#absConnectionStatus');
+        const url = page.querySelector('#absServerUrl').value.replace(/\/$/, '');
+        const token = page.querySelector('#absAdminToken').value;
+        const status = page.querySelector('#absConnectionStatus');
+        const btn = page.querySelector('#absTestConnection');
 
         if (!url || !token) {
-            showModal('⚠️', 'Server URL and Admin Token are required.\n\nEnter both fields and click Save before testing.');
+            status.textContent = 'Server URL and Admin Token are required';
+            status.style.color = 'var(--error-color, red)';
+            Dashboard.alert({
+                title: 'Missing Information',
+                message: 'Server URL and Admin Token are required.'
+            });
             return;
         }
 
-        status.innerHTML = '<span class="abs-spinner"></span>';
+        status.textContent = 'Testing…';
+        status.style.color = '';
+        btn.disabled = true;
 
         fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/TestConnection?serverUrl=' + encodeURIComponent(url)), {
             method: 'GET',
@@ -619,39 +681,53 @@
         })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (data) {
-            status.textContent = '';
-            if (data.success || data.Success) {
-                showModal('✅', 'Connected successfully!\n\nLogged in as: ' + (data.username || data.Username || 'unknown'));
+            btn.disabled = false;
+            if (data.Success) {
+                status.style.color = 'var(--success-color, green)';
+                status.textContent = '✓ Connected as ' + (data.Username || 'unknown');
+                Dashboard.alert({
+                    title: 'Connection Successful',
+                    message: 'Connected to Audiobookshelf server as ' + (data.Username || 'unknown') + '.'
+                });
             } else {
-                showModal('❌', 'Connection failed.\n\n' + (data.error || data.Error || 'Check the server URL and admin token.'));
+                status.style.color = 'var(--error-color, red)';
+                status.textContent = '✗ ' + (data.Error || 'Connection failed');
+                Dashboard.alert({
+                    title: 'Connection Failed',
+                    message: data.Error || 'Connection failed. Check URL and token.'
+                });
             }
         })
         .catch(function (err) {
-            status.textContent = '';
-            showModal('❌', 'Connection failed.\n\nCould not reach the server.\nCheck the URL and ensure Audiobookshelf is running.\n\n(' + err + ')');
+            btn.disabled = false;
+            status.style.color = 'var(--error-color, red)';
+            status.textContent = '✗ Connection failed — check URL and token';
+            Dashboard.alert({
+                title: 'Connection Failed',
+                message: 'Could not connect to the Audiobookshelf server. Check URL and token.'
+            });
         });
     }
 
-    // ── Page initialization ───────────────────────────────────────────────────
+    document.addEventListener('pageshow', function (e) {
+        var page = document.querySelector('#' + pageId);
+        if (!page) return;
 
-    function bindListeners(page) {
-        page.querySelector('#absTestConnection').addEventListener('click', function () { testConnection(page); });
+        loadConfig(page);
+
+        page.querySelector('#absTestConnection').addEventListener('click', function () {
+            testConnection(page);
+        });
+
         page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
             ev.preventDefault();
             saveConfig(page);
         });
-        var discoverBtn = page.querySelector('#discoverUsers');
-        if (discoverBtn) discoverBtn.addEventListener('click', function () { discoverUsers(page); });
-    }
 
-    function initPage() {
-        var page = document.getElementById('audiobookshelfConfigPage');
-        if (!page) return false;
-        if (!page.dataset.absListenersBound) {
-            bindListeners(page);
-            page.dataset.absListenersBound = 'true';
-        }
-        loadConfig(page);   // always reload on every visit
+        page.querySelector('#discoverUsers')?.addEventListener('click', function () {
+            discoverUsers(page);
+        });
+    });
         return true;
     }
 
