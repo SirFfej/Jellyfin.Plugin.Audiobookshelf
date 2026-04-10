@@ -44,6 +44,7 @@
     -->
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.11" />
+  </ItemGroup>
 
     <!-- Code analysis - disabled for existing codebase -->
     <!-- <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All" /> -->

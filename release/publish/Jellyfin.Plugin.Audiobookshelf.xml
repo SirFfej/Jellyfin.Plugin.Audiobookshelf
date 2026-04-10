@@ -1055,23 +1055,26 @@
             for locally-scanned audiobooks, and syncs playback progress bidirectionally.
             </remarks>
         </member>
-        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Instance">
-            <summary>
-            Gets the singleton instance of this plugin, set during construction.
-            </summary>
-        </member>
-        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Name">
-            <inheritdoc />
-        </member>
-        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Description">
-            <inheritdoc />
-        </member>
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Plugin.#ctor(MediaBrowser.Common.Configuration.IApplicationPaths,MediaBrowser.Model.Serialization.IXmlSerializer)">
             <summary>
             Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Plugin"/> class.
             </summary>
             <param name="applicationPaths">Jellyfin application path provider.</param>
             <param name="xmlSerializer">Jellyfin XML serializer used for config persistence.</param>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Id">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Instance">
+            <summary>
+            Gets the singleton instance of this plugin, set during construction.
+            </summary>
         </member>
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Plugin.GetPages">
             <inheritdoc />

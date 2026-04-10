@@ -38,23 +38,54 @@
             Returns full detail for a single library item. Cached for 5 minutes.
             </summary>
         </member>
-        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetProgressAsync(System.String,System.Threading.CancellationToken)">
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetProgressAsync(System.String,System.String,System.Threading.CancellationToken)">
             <summary>
             Returns the current user's listening progress for a library item.
             Not cached — always fetches fresh data.
             </summary>
+            <param name="libraryItemId">The ABS library item ID.</param>
+            <param name="episodeId">Optional episode ID for podcasts.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>Progress data or null if not found.</returns>
         </member>
-        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.UpdateProgressAsync(System.String,System.Double,System.Double,System.Boolean,System.Threading.CancellationToken)">
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.UpdateProgressAsync(System.String,System.Double,System.Double,System.Boolean,System.Boolean,System.Int32,System.Nullable{System.Int64},System.String,System.Threading.CancellationToken)">
             <summary>
             Updates the current user's listening progress for a library item.
             </summary>
+            <param name="libraryItemId">The ABS library item ID.</param>
+            <param name="currentTime">Current playback position in seconds.</param>
+            <param name="duration">Total duration in seconds.</param>
+            <param name="isFinished">Whether the item is marked as finished.</param>
+            <param name="hideFromContinueListening">Whether to hide from continue listening.</param>
+            <param name="markAsFinishedTimeRemaining">Seconds remaining to auto-mark as finished (default 10).</param>
+            <param name="lastUpdate">Optional Unix ms timestamp for local sync.</param>
+            <param name="episodeId">Optional episode ID for podcasts.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>True if update succeeded.</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.BatchUpdateProgressAsync(System.Collections.Generic.IEnumerable{Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem},System.Threading.CancellationToken)">
+            <summary>
+            Batch updates progress for multiple items.
+            Used for local sync with lastUpdate timestamps.
+            </summary>
+            <param name="updates">Array of progress update payloads.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>True if batch update succeeded.</returns>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetItemsInProgressAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Gets all items currently in progress for the user.
+            </summary>
+            <param name="limit">Maximum number of items to return (default 25).</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>Items in progress response.</returns>
         </member>
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.StartPlaybackSessionAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
             <summary>
             Starts an ABS playback session and returns the session data including audio track URLs.
             </summary>
         </member>
-        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.SyncSessionAsync(System.String,System.Double,System.Double,System.Threading.CancellationToken)">
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.SyncSessionAsync(System.String,System.Double,System.Double,System.Double,System.Threading.CancellationToken)">
             <summary>
             Syncs an open playback session with the current position.
             </summary>
@@ -68,6 +99,11 @@
             <summary>
             Returns all currently open playback sessions (admin only).
             Used at startup to close orphaned Jellyfin sessions.
+            </summary>
+        </member>
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.SyncLocalSessionAsync(System.String,System.Double,System.Double,System.Int64,System.Threading.CancellationToken)">
+            <summary>
+            Syncs a local session (for mobile/offline sync).
             </summary>
         </member>
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClient.GetCurrentUserAsync(System.Threading.CancellationToken)">
@@ -100,6 +136,94 @@
         </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.AbsAllUsersResponse.Users">
             <summary>Gets or sets the list of all users.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsItemsInProgressResponse">
+            <summary>
+            Response from <c>GET /api/me/items-in-progress</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.AbsItemsInProgressResponse.LibraryItems">
+            <summary>Gets or sets the library items in progress.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem">
+            <summary>
+            Payload for batch progress updates via <c>PATCH /api/me/progress/batch/update</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem.LibraryItemId">
+            <summary>Gets or sets the library item ID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem.EpisodeId">
+            <summary>Gets or sets the episode ID for podcasts (optional).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem.CurrentTime">
+            <summary>Gets or sets the current playback position in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem.Duration">
+            <summary>Gets or sets the duration in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem.Progress">
+            <summary>Gets or sets the fractional progress (0.0–1.0).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem.IsFinished">
+            <summary>Gets or sets whether the item is finished.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.ProgressBatchItem.LastUpdate">
+            <summary>Gets or sets the Unix ms timestamp for local sync.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.SessionSyncPayload">
+            <summary>
+            Payload for session sync via <c>POST /api/session/:id/sync</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SessionSyncPayload.CurrentTime">
+            <summary>Gets or sets the current playback position in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SessionSyncPayload.TimeListened">
+            <summary>Gets or sets the total time listened in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SessionSyncPayload.Duration">
+            <summary>Gets or sets the total duration in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SessionSyncPayload.DisplayTitle">
+            <summary>Gets or sets the display title (optional).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SessionSyncPayload.PlayMethod">
+            <summary>Gets or sets the play method (optional).</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.SessionClosePayload">
+            <summary>
+            Payload for session close via <c>POST /api/session/:id/close</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SessionClosePayload.CurrentTime">
+            <summary>Gets or sets the current playback position in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.SessionClosePayload.TimeListened">
+            <summary>Gets or sets the total time listened in seconds.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.LocalSessionPayload">
+            <summary>
+            Payload for local session sync via <c>POST /api/session/local</c>.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.LocalSessionPayload.LibraryItemId">
+            <summary>Gets or sets the library item ID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.LocalSessionPayload.EpisodeId">
+            <summary>Gets or sets the episode ID for podcasts (optional).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.LocalSessionPayload.CurrentTime">
+            <summary>Gets or sets the current playback position in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.LocalSessionPayload.Duration">
+            <summary>Gets or sets the duration in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.LocalSessionPayload.LastUpdate">
+            <summary>Gets or sets the Unix ms timestamp of the update.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.LocalSessionPayload.IsFinished">
+            <summary>Gets or sets whether the item is finished.</summary>
         </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory">
             <summary>
@@ -426,6 +550,15 @@
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.LibraryItemId">
             <summary>Gets or sets the library item ID this progress applies to.</summary>
         </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.EpisodeId">
+            <summary>Gets or sets the episode ID for podcast episodes.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.MediaItemId">
+            <summary>Gets or sets the media item ID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.MediaItemType">
+            <summary>Gets or sets the media item type: "book" or "podcastEpisode".</summary>
+        </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.Duration">
             <summary>Gets or sets the total duration in seconds (from item metadata).</summary>
         </member>
@@ -438,8 +571,20 @@
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.IsFinished">
             <summary>Gets or sets a value indicating whether the item has been marked as finished.</summary>
         </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.HideFromContinueListening">
+            <summary>Gets or sets a value indicating whether to hide from continue listening.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.EbookLocation">
+            <summary>Gets or sets the ebook location for ebook progress.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.EbookProgress">
+            <summary>Gets or sets the ebook progress (0.0–1.0).</summary>
+        </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.LastUpdate">
             <summary>Gets or sets the Unix epoch milliseconds of the last update.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.StartedAt">
+            <summary>Gets or sets the Unix epoch milliseconds when playback started.</summary>
         </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsMediaProgress.FinishedAt">
             <summary>Gets or sets the Unix epoch milliseconds when the item was finished (null if not finished).</summary>
@@ -503,8 +648,7 @@
         </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser">
             <summary>
-            The current ABS user returned by <c>GET /api/me</c>.
-            Used for connection validation.
+            An ABS user returned by <c>GET /api/me</c> or <c>GET /api/users</c>.
             </summary>
         </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Id">
@@ -513,14 +657,90 @@
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Username">
             <summary>Gets or sets the username.</summary>
         </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Email">
+            <summary>Gets or sets the user's email address.</summary>
+        </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Type">
             <summary>Gets or sets the user type: <c>"root"</c>, <c>"admin"</c>, <c>"user"</c>, or <c>"guest"</c>.</summary>
         </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.IsActive">
             <summary>Gets or sets a value indicating whether the account is active.</summary>
         </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.IsLocked">
+            <summary>Gets or sets a value indicating whether the account is locked.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.LastSeen">
+            <summary>Gets or sets the last seen timestamp.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Permissions">
+            <summary>Gets or sets the user's permissions object.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Bookmarks">
+            <summary>Gets or sets the user's bookmarks.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.ExtraData">
+            <summary>Gets or sets extra data.</summary>
+        </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.Token">
-            <summary>Gets or sets the user's API token (admin only).</summary>
+            <summary>Gets or sets the user's API token (admin only for non-own users).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.CreatedAt">
+            <summary>Gets or sets when the user was created.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUser.UpdatedAt">
+            <summary>Gets or sets when the user was last updated.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions">
+            <summary>
+            User permissions from Audiobookshelf.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.CanDownload">
+            <summary>Gets or sets whether user can download.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.CanUpdate">
+            <summary>Gets or sets whether user can update.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.CanDelete">
+            <summary>Gets or sets whether user can delete.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.CanUpload">
+            <summary>Gets or sets whether user can upload.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.CanAccessExplicitContent">
+            <summary>Gets or sets whether user can access explicit content.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.CanAccessAllLibraries">
+            <summary>Gets or sets whether user can access all libraries.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.CanAccessAllTags">
+            <summary>Gets or sets whether user can access all tags.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.CanCreateEReader">
+            <summary>Gets or sets whether user can create e-reader devices.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.LibrariesAccessible">
+            <summary>Gets or sets the list of accessible library IDs.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsUserPermissions.ItemTagsSelected">
+            <summary>Gets or sets the selected item tags.</summary>
+        </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookmark">
+            <summary>
+            An audiobook bookmark.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookmark.LibraryItemId">
+            <summary>Gets or sets the library item ID.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookmark.Title">
+            <summary>Gets or sets the bookmark title.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookmark.Time">
+            <summary>Gets or sets the bookmark time in seconds.</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Api.Models.AbsBookmark.CreatedAt">
+            <summary>Gets or sets the creation timestamp.</summary>
         </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.Api.UserDiscoveryController">
             <summary>
@@ -648,6 +868,19 @@
             Gets or sets the number of mappings saved.
             </summary>
         </member>
+        <member name="T:Jellyfin.Plugin.Audiobookshelf.UserTokenEntry">
+            <summary>
+            Serializable key-value pair for user→token mappings.
+            <see cref="T:System.Collections.Generic.Dictionary`2"/> cannot be XML-serialized by Jellyfin's internal
+            XmlSerializer because it implements IDictionary.
+            </summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.UserTokenEntry.UserId">
+            <summary>Gets or sets the Jellyfin user ID (GUID string).</summary>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.UserTokenEntry.Token">
+            <summary>Gets or sets the ABS API token (JWT).</summary>
+        </member>
         <member name="T:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration">
             <summary>
             Plugin configuration persisted as XML by <see cref="T:MediaBrowser.Common.Plugins.BasePlugin`1"/>.
@@ -655,6 +888,8 @@
             <remarks>
             Do NOT add JSON attributes to this class — Jellyfin serialises it with its internal
             <c>IXmlSerializer</c>, not <c>System.Text.Json</c>.
+            Do NOT use <see cref="T:System.Collections.Generic.Dictionary`2"/> — it implements IDictionary and cannot
+            be XML-serialized. Use <see cref="T:System.Collections.Generic.List`1"/> of a custom entry class instead.
             </remarks>
         </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.AbsServerUrl">
@@ -669,10 +904,16 @@
             when no per-user token is configured.
             </summary>
         </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.UserTokenEntries">
+            <summary>
+            Gets or sets the per-user ABS API token entries (XML-serializable backing store).
+            Use <see cref="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.UserTokenMap"/> for dictionary-style access in code.
+            </summary>
+        </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.UserTokenMap">
             <summary>
-            Gets or sets the per-user ABS API token map.
-            Key: Jellyfin user ID (GUID string). Value: ABS API token (JWT).
+            Gets a dictionary view of <see cref="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.UserTokenEntries"/> for read-only lookup.
+            Mutations must go through <see cref="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.UserTokenEntries"/> directly.
             </summary>
         </member>
         <member name="P:Jellyfin.Plugin.Audiobookshelf.PluginConfiguration.IncludedLibraryIds">
@@ -814,23 +1055,26 @@
             for locally-scanned audiobooks, and syncs playback progress bidirectionally.
             </remarks>
         </member>
-        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Instance">
-            <summary>
-            Gets the singleton instance of this plugin, set during construction.
-            </summary>
-        </member>
-        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Name">
-            <inheritdoc />
-        </member>
-        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Description">
-            <inheritdoc />
-        </member>
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Plugin.#ctor(MediaBrowser.Common.Configuration.IApplicationPaths,MediaBrowser.Model.Serialization.IXmlSerializer)">
             <summary>
             Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Plugin"/> class.
             </summary>
             <param name="applicationPaths">Jellyfin application path provider.</param>
             <param name="xmlSerializer">Jellyfin XML serializer used for config persistence.</param>
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Name">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Id">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Description">
+            <inheritdoc />
+        </member>
+        <member name="P:Jellyfin.Plugin.Audiobookshelf.Plugin.Instance">
+            <summary>
+            Gets the singleton instance of this plugin, set during construction.
+            </summary>
         </member>
         <member name="M:Jellyfin.Plugin.Audiobookshelf.Plugin.GetPages">
             <inheritdoc />
@@ -1031,7 +1275,7 @@
             Run this manually after a metadata refresh, or on a schedule, to keep chapter lists in sync.
             </summary>
         </member>
-        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,MediaBrowser.Controller.Library.ILibraryManager,MediaBrowser.Controller.Chapters.IChapterManager,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask})">
+        <member name="M:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask.#ctor(Jellyfin.Plugin.Audiobookshelf.Api.AbsApiClientFactory,MediaBrowser.Controller.Library.ILibraryManager,MediaBrowser.Controller.Persistence.IChapterRepository,Microsoft.Extensions.Logging.ILogger{Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask})">
             <summary>
             Initializes a new instance of the <see cref="T:Jellyfin.Plugin.Audiobookshelf.Sync.ChapterSyncTask"/> class.
             </summary>

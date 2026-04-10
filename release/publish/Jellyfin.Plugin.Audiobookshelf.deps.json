@@ -6,7 +6,7 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v9.0": {
-      "Jellyfin.Plugin.Audiobookshelf/1.0.8.0": {
+      "Jellyfin.Plugin.Audiobookshelf/1.1.0.0": {
         "dependencies": {
           "Microsoft.Extensions.Caching.Memory": "9.0.11",
           "Microsoft.Extensions.Http": "9.0.11"
@@ -197,7 +197,7 @@
     }
   },
   "libraries": {
-    "Jellyfin.Plugin.Audiobookshelf/1.0.8.0": {
+    "Jellyfin.Plugin.Audiobookshelf/1.1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

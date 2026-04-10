@@ -5,7 +5,7 @@
   },
   "projects": {
     "/home/sirffej/Documents/CodeProjects/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf.csproj": {
-      "version": "1.0.8",
+      "version": "1.1.0",
       "restore": {
         "projectUniqueName": "/home/sirffej/Documents/CodeProjects/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf/Jellyfin.Plugin.Audiobookshelf.csproj",
         "projectName": "Jellyfin.Plugin.Audiobookshelf",
@@ -30,7 +30,10 @@
           }
         },
         "warningProperties": {
-          "allWarningsAsErrors": true
+          "allWarningsAsErrors": true,
+          "warnAsError": [
+            "NU1605"
+          ]
         },
         "restoreAuditProperties": {
           "enableAudit": "true",
