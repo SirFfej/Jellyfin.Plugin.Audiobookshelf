@@ -4,13 +4,17 @@
     <TargetFramework>net9.0</TargetFramework>
     <AssemblyName>Jellyfin.Plugin.Audiobookshelf</AssemblyName>
     <RootNamespace>Jellyfin.Plugin.Audiobookshelf</RootNamespace>
-    <Version>1.0.9.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <CodeAnalysisRuleSet>../jellyfin.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- Disable CA rules that are too strict for existing codebase -->
+    <NoWarn>
+      CA1002;CA1305;CA1819;CA1836;CA1849;CA1863;CA2007;CA2227
+    </NoWarn>
   </PropertyGroup>
 
   <!-- Plugin GUID — read by BasePlugin<T> via reflection to set the plugin Id -->
@@ -40,6 +44,11 @@
     -->
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.11" />
+
+    <!-- Code analysis - disabled for existing codebase -->
+    <!-- <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All" /> -->
+    <!-- <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="All" /> -->
+    <!-- <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All" /> -->
   </ItemGroup>
 
   <!-- ASP.NET Core types provided by the host at runtime -->
@@ -49,6 +58,7 @@
 
   <!-- Embed the admin configuration HTML page as a resource -->
   <ItemGroup>
+    <None Remove="Configuration\configPage.html" />
     <EmbeddedResource Include="Configuration\configPage.html" />
   </ItemGroup>
 

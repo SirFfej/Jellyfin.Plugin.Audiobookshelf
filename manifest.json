@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Align with jellyfin-plugin-template: add .editorconfig, jellyfin.ruleset, Directory.Build.props, GitHub workflows (build/test/publish/codeql), renovate.json. Add explicit Guid override in Plugin.cs. Disable strict CA rules for existing codebase.",
+        "checksum": "",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.0.0/Jellyfin.Plugin.Audiobookshelf_1.1.0.0.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-09T00:00:00Z",
+        "version": "1.1.0.0"
+      },
+      {
         "changelog": "Fix configPage.html: add missing pageId variable (ReferenceError crash); remove orphaned return/brace/initPage merge artifacts; guard event listeners against stacking on return visits; fix CSS class names (abs-match-card/abs-spinner) to match JS (user-match-card/loading-spinner). Bump to v1.0.9.0.",
         "checksum": "63abdd43e55ff7e52596cbc46ee83f91",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.9.0/Jellyfin.Plugin.Audiobookshelf_1.0.9.0.zip",
