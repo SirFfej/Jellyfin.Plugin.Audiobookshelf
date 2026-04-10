@@ -46,12 +46,6 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.11" />
   </ItemGroup>
 
-    <!-- Code analysis - disabled for existing codebase -->
-    <!-- <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All" /> -->
-    <!-- <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="All" /> -->
-    <!-- <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All" /> -->
-  </ItemGroup>
-
   <!-- ASP.NET Core types provided by the host at runtime -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
