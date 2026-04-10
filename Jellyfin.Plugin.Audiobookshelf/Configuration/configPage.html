@@ -10,7 +10,7 @@
         that element into the view; the <head> is never parsed by the browser.
     -->
     <style>
-        .abs-match-card {
+        .user-match-card {
             border: 1px solid var(--border-color, #ddd);
             border-radius: 4px;
             padding: 12px;
@@ -19,22 +19,22 @@
             align-items: center;
             gap: 12px;
         }
-        .abs-match-card.matched   { background-color: rgba(0,128,0,0.12); }
-        .abs-match-card.unmatched { background-color: rgba(255,165,0,0.12); }
-        .abs-match-icon { font-size: 24px; }
-        .abs-match-info { flex: 1; }
-        .abs-match-type { font-size: 12px; color: var(--text-secondary, #888); }
-        .abs-spinner {
+        .user-match-card.matched   { background-color: rgba(0,128,0,0.12); }
+        .user-match-card.unmatched { background-color: rgba(255,165,0,0.12); }
+        .match-icon { font-size: 24px; }
+        .match-info { flex: 1; }
+        .match-type { font-size: 12px; color: var(--text-secondary, #888); }
+        .loading-spinner {
             display: inline-block;
             width: 14px; height: 14px;
             border: 2px solid rgba(255,255,255,0.2);
             border-top-color: var(--accent-color, #00a0dc);
             border-radius: 50%;
-            animation: abs-spin 0.8s linear infinite;
+            animation: loading-spin 0.8s linear infinite;
             vertical-align: middle;
             margin-right: 6px;
         }
-        @keyframes abs-spin { to { transform: rotate(360deg); } }
+        @keyframes loading-spin { to { transform: rotate(360deg); } }
 
         /* Modal overlay — hidden by default via inline style, shown by JS */
         #absModal {
@@ -209,7 +209,9 @@
     'use strict';
 
     var pluginGuid = '7b2f4a1d-e3c0-4e8b-9d5a-3f7c6b2e0a14';
+    var pageId = 'audiobookshelfConfigPage';
     var userMatches = [];
+    var listenersAttached = false;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -710,30 +712,28 @@
     }
 
     document.addEventListener('pageshow', function (e) {
-        var page = document.querySelector('#' + pageId);
+        var page = document.getElementById(pageId);
         if (!page) return;
 
         loadConfig(page);
 
-        page.querySelector('#absTestConnection').addEventListener('click', function () {
-            testConnection(page);
-        });
+        if (!listenersAttached) {
+            listenersAttached = true;
 
-        page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
-            ev.preventDefault();
-            saveConfig(page);
-        });
+            page.querySelector('#absTestConnection').addEventListener('click', function () {
+                testConnection(page);
+            });
 
-        page.querySelector('#discoverUsers')?.addEventListener('click', function () {
-            discoverUsers(page);
-        });
+            page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
+                ev.preventDefault();
+                saveConfig(page);
+            });
+
+            page.querySelector('#discoverUsers').addEventListener('click', function () {
+                discoverUsers(page);
+            });
+        }
     });
-        return true;
-    }
-
-    // viewshow fires on each SPA navigation to this page (first load and return visits).
-    document.addEventListener('viewshow', function () { initPage(); });
-    initPage();
 
 }());
 </script>
