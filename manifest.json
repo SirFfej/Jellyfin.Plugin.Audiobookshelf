@@ -10,7 +10,7 @@
     "versions": [
       {
         "changelog": "Align with jellyfin-plugin-template: add .editorconfig, jellyfin.ruleset, Directory.Build.props, GitHub workflows (build/test/publish/codeql), renovate.json. Add explicit Guid override in Plugin.cs. Disable strict CA rules for existing codebase.",
-        "checksum": "",
+        "checksum": "226c61512f5f8b024bb7c934f9be5e42fc9a1eead8873b0bc500ddf2ff66faac",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.0.0/Jellyfin.Plugin.Audiobookshelf_1.1.0.0.zip",
         "targetAbi": "10.11.3.0",
         "timestamp": "2026-04-09T00:00:00Z",
