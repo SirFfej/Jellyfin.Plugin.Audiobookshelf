@@ -39,6 +39,7 @@ public class TokenVault
             _config.UserTokenEntries.Add(new UserTokenEntry { UserId = jellyfinUserId, Token = absToken });
         }
 
+        Plugin.Instance!.SaveConfiguration();
         _logger.LogDebug("Stored ABS token for user {UserId}", jellyfinUserId);
         return Task.FromResult(true);
     }
@@ -58,6 +59,7 @@ public class TokenVault
     public Task DeleteTokenAsync(string jellyfinUserId)
     {
         _config.UserTokenEntries.RemoveAll(e => e.UserId == jellyfinUserId);
+        Plugin.Instance!.SaveConfiguration();
         _logger.LogDebug("Deleted ABS token for user {UserId}", jellyfinUserId);
         return Task.CompletedTask;
     }

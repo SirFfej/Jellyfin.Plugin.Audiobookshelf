@@ -119,7 +119,12 @@ public class UserDiscoveryController : ControllerBase
             return BadRequest("X-Abs-Token header is required");
         }
 
-        var matches = await _mappingService.DiscoverUsersAsync(adminToken, serverUrl, ct);
+        if (string.IsNullOrWhiteSpace(serverUrl))
+        {
+            return BadRequest("serverUrl query parameter is required");
+        }
+
+        var matches = await _mappingService.DiscoverUsersAsync(adminToken, serverUrl.Trim(), ct);
         return Ok(new UserDiscoveryResponse { Matches = ConvertToDto(matches) });
     }
 
@@ -159,6 +164,7 @@ public class UserDiscoveryController : ControllerBase
             {
                 dto.AbsUserId = match.AbsUser.Id;
                 dto.AbsUsername = match.AbsUser.Username ?? string.Empty;
+                dto.AbsToken = match.AbsUser.Token;
             }
 
             dtos.Add(dto);
@@ -198,7 +204,8 @@ public class UserDiscoveryController : ControllerBase
                 match.AbsUser = new Api.Models.AbsUser
                 {
                     Id = dto.AbsUserId,
-                    Username = dto.AbsUsername
+                    Username = dto.AbsUsername,
+                    Token = dto.AbsToken
                 };
             }
 
@@ -270,6 +277,12 @@ public class UserMatchDto
     /// Gets or sets the match type (exact, fuzzy, none).
     /// </summary>
     public string MatchType { get; set; } = "none";
+
+    /// <summary>
+    /// Gets or sets the ABS API token for the matched ABS user.
+    /// Only populated when the admin token grants access to user tokens.
+    /// </summary>
+    public string? AbsToken { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this match is selected for linking.

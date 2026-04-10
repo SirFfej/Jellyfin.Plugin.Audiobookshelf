@@ -164,7 +164,7 @@ public class UserMappingService
     {
         try
         {
-            var client = _clientFactory.GetClientForToken(adminToken);
+            var client = _clientFactory.GetClientForToken(adminToken, serverUrl);
             var response = await client.GetAllUsersAsync(ct).ConfigureAwait(false);
             return response?.Users?.ToList() ?? new List<AbsUser>();
         }

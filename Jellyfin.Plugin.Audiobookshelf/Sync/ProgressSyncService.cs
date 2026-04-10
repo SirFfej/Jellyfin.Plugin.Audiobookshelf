@@ -80,7 +80,14 @@ public sealed partial class ProgressSyncService : IDisposable
             try
             {
                 await Task.Delay(DebounceDelay, cts.Token).ConfigureAwait(false);
-                _pending.TryRemove(debounceKey, out _);
+
+                // Only proceed if this CTS is still the current one for the key.
+                // If a newer update arrived and replaced it, TryRemove returns false
+                // and we bail out to avoid sending a duplicate request.
+                if (!_pending.TryRemove(new KeyValuePair<string, CancellationTokenSource>(debounceKey, cts)))
+                {
+                    return;
+                }
 
                 var client = _clientFactory.GetClientForUser(userId);
                 bool ok = await client.UpdateProgressAsync(
@@ -92,7 +99,7 @@ public sealed partial class ProgressSyncService : IDisposable
                     markAsFinishedTimeRemaining: 10,
                     lastUpdate: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     episodeId: null,
-                    CancellationToken.None)
+                    cts.Token)
                     .ConfigureAwait(false);
 
                 if (!ok)

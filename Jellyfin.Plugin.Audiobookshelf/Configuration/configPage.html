@@ -387,8 +387,8 @@
     // ── Discover Users ────────────────────────────────────────────────────────
 
     function discoverUsers(page) {
-        const url = page.querySelector('#absServerUrl').value;
-        const token = page.querySelector('#absAdminToken').value;
+        const url = page.querySelector('#absServerUrl').value.trim().replace(/\/$/, '');
+        const token = page.querySelector('#absAdminToken').value.trim();
         const status = page.querySelector('#discoverStatus');
         const btn = page.querySelector('#discoverUsers');
 
@@ -520,18 +520,13 @@
                     const jfId = select.value;
                     const jfUsername = select.options[select.selectedIndex].text;
 
-                    const existingMatch = userMatches.find(m => m.JellyfinUserId === jfId);
-                    if (existingMatch) {
-                        existingMatch.IsSelected = true;
-                    } else {
-                        userMatches.push({
-                            JellyfinUserId: jfId,
-                            JellyfinUsername: jfUsername,
-                            AbsUserId: absId,
-                            AbsUsername: absUsername,
-                            MatchType: 'manual',
-                            IsSelected: true
-                        });
+                    // Update the existing entry for this ABS user (preserves AbsToken).
+                    // Pushing a new entry would lose the token received from the server.
+                    const absEntry = userMatches.find(m => (m.AbsUserId || m.absUserId) === absId);
+                    if (absEntry) {
+                        absEntry.JellyfinUserId = jfId;
+                        absEntry.JellyfinUsername = jfUsername;
+                        absEntry.IsSelected = true;
                     }
                 }
             });
@@ -654,8 +649,8 @@
     // ── Test Connection ───────────────────────────────────────────────────────
 
     function testConnection(page) {
-        const url = page.querySelector('#absServerUrl').value.replace(/\/$/, '');
-        const token = page.querySelector('#absAdminToken').value;
+        const url = page.querySelector('#absServerUrl').value.trim().replace(/\/$/, '');
+        const token = page.querySelector('#absAdminToken').value.trim();
         const status = page.querySelector('#absConnectionStatus');
         const btn = page.querySelector('#absTestConnection');
 

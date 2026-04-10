@@ -41,11 +41,18 @@ public class AbsApiClientFactory
     /// Returns a client configured for the given token, creating one if necessary.
     /// </summary>
     /// <param name="token">ABS API bearer token.</param>
+    /// <param name="explicitBaseUrl">
+    /// Optional server URL override. When provided this takes priority over the saved
+    /// plugin configuration, allowing callers (e.g. user-discovery) to target the URL
+    /// currently in the admin form before it has been saved.
+    /// </param>
     /// <returns>A configured <see cref="AbsApiClient"/>.</returns>
-    public AbsApiClient GetClientForToken(string token)
+    public AbsApiClient GetClientForToken(string token, string? explicitBaseUrl = null)
     {
         var config = Plugin.Instance?.Configuration;
-        string baseUrl = config?.NormalizedServerUrl ?? string.Empty;
+        string baseUrl = !string.IsNullOrWhiteSpace(explicitBaseUrl)
+            ? explicitBaseUrl.TrimEnd('/')
+            : config?.NormalizedServerUrl ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(token))
         {

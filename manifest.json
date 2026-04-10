@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Bug fixes: SaveMappings now correctly persists ABS tokens (token was stripped from DTO); TokenVault calls SaveConfiguration() so tokens survive restart; debounce TryRemove race fixed to prevent duplicate progress updates; Discover Users now uses form URL instead of stale saved config URL; manual user-dropdown assignment preserves ABS token; URL/token fields trimmed consistently.",
+        "checksum": "7638b4000d2c260a55a529d2c5d15590",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.1.0/Jellyfin.Plugin.Audiobookshelf_1.1.1.0.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-10T00:00:00Z",
+        "version": "1.1.1.0"
+      },
+      {
         "changelog": "Align with jellyfin-plugin-template: add .editorconfig, jellyfin.ruleset, Directory.Build.props, GitHub workflows (build/test/publish/codeql), renovate.json. Add explicit Guid override in Plugin.cs. Disable strict CA rules for existing codebase.",
         "checksum": "7dbde566fae62352c85ce18364e52e11",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.0.0/Jellyfin.Plugin.Audiobookshelf_1.1.0.0.zip",

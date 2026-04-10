@@ -21,3 +21,7 @@ Thumbs.db
 # Local context files (not for repo)
 .context/
 CONTEXT.md
+
+# Build/release output — not source, do not commit
+dist/
+release/
