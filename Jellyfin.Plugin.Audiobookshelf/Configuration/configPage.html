@@ -202,8 +202,6 @@
         </div>
     </div>
 
-</div><!-- end data-role="page" -->
-
 <script type="text/javascript">
 (function () {
     'use strict';
@@ -260,16 +258,21 @@
         if (modal) modal.style.display = 'none';
     }
 
-    document.addEventListener('click', function (e) {
-        if (e.target && e.target.id === 'absModalOk') hideModal();
-    });
-    document.addEventListener('keydown', function (e) {
-        if ((e.key === 'Escape' || e.key === 'Enter') &&
-            document.getElementById('absModal') &&
-            document.getElementById('absModal').style.display !== 'none') {
-            hideModal();
-        }
-    });
+    // Use a named function so we can guard against re-registration when Jellyfin
+    // SPA re-executes this script on each navigation to the config page.
+    if (!window._absModalClickBound) {
+        window._absModalClickBound = true;
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.id === 'absModalOk') hideModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if ((e.key === 'Escape' || e.key === 'Enter') &&
+                document.getElementById('absModal') &&
+                document.getElementById('absModal').style.display !== 'none') {
+                hideModal();
+            }
+        });
+    }
 
     // ── Load config ───────────────────────────────────────────────────────────
 
@@ -424,11 +427,12 @@
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (data) {
             btn.disabled = false;
-            userMatches = data.Matches;
-            renderUserMatches(page, data.Matches);
-            status.textContent = 'Found ' + data.Matches.length + ' user(s)';
+            var matches = data.matches || data.Matches || [];
+            userMatches = matches;
+            renderUserMatches(page, matches);
+            status.textContent = 'Found ' + matches.length + ' user(s)';
             status.style.color = 'var(--success-color, green)';
-            notify('✅', 'Found ' + data.Matches.length + ' matching user(s).\nReview the matches above and save your selections.');
+            notify('✅', 'Found ' + matches.length + ' matching user(s).\nReview the matches above and save your selections.');
         })
         .catch(function (err) {
             btn.disabled = false;
@@ -445,27 +449,35 @@
         let html = '';
 
         matches.forEach(function (match, index) {
-            const cardClass = match.MatchType === 'exact' ? 'matched' : 'unmatched';
-            const icon = match.MatchType === 'exact' ? '✓' : match.MatchType === 'fuzzy' ? '?' : '✗';
-            const matchTypeText = match.MatchType === 'exact' ? 'Exact match' : match.MatchType === 'fuzzy' ? 'Possible match' : 'No match';
-            const jfUsername = esc(match.JellyfinUsername || 'No Jellyfin user');
-            const absUsername = esc(match.AbsUsername || '');
-            const absIdSafe = esc(match.AbsUserId || '');
+            // Normalize: Jellyfin serializes camelCase; accept both for safety
+            var matchType  = match.matchType      || match.MatchType      || 'none';
+            var jfUserId   = match.jellyfinUserId  || match.JellyfinUserId  || '';
+            var jfName     = match.jellyfinUsername || match.JellyfinUsername || 'No Jellyfin user';
+            var absName    = match.absUsername     || match.AbsUsername     || '';
+            var absId      = match.absUserId       || match.AbsUserId       || '';
+            var isSelected = match.isSelected !== undefined ? match.isSelected : (match.IsSelected || false);
+
+            const cardClass = matchType === 'exact' ? 'matched' : 'unmatched';
+            const icon = matchType === 'exact' ? '✓' : matchType === 'fuzzy' ? '?' : '✗';
+            const matchTypeText = matchType === 'exact' ? 'Exact match' : matchType === 'fuzzy' ? 'Possible match' : 'No match';
+            const jfUsername = esc(jfName);
+            const absUsername = esc(absName);
+            const absIdSafe = esc(absId);
 
             html += '<div class="user-match-card ' + cardClass + '">';
             html += '<span class="match-icon">' + icon + '</span>';
             html += '<div class="match-info">';
             html += '<div><strong>' + jfUsername + '</strong>';
-            if (match.AbsUsername) {
+            if (absName) {
                 html += ' ↔ <strong>' + absUsername + '</strong>';
             }
             html += '</div>';
             html += '<div class="match-type">' + matchTypeText + '</div>';
             html += '</div>';
 
-            if (match.JellyfinUserId && match.AbsUserId) {
-                html += '<input type="checkbox" class="emby-checkbox match-checkbox" data-index="' + index + '" ' + (match.IsSelected ? 'checked' : '') + ' />';
-            } else if (match.AbsUserId) {
+            if (jfUserId && absId) {
+                html += '<input type="checkbox" class="emby-checkbox match-checkbox" data-index="' + index + '" ' + (isSelected ? 'checked' : '') + ' />';
+            } else if (absId) {
                 html += '<select class="emby-select match-select" data-abs-id="' + absIdSafe + '" data-abs-username="' + absUsername + '">';
                 html += '<option value="">-- Select Jellyfin User --</option>';
                 html += '</select>';
@@ -511,22 +523,29 @@
 
                 if (this.classList.contains('match-checkbox')) {
                     if (index >= 0 && index < userMatches.length) {
+                        // Set both casings so saveUserMappings filter sees the update
+                        // regardless of what the server originally returned
+                        userMatches[index].isSelected = this.checked;
                         userMatches[index].IsSelected = this.checked;
                     }
                 }
 
                 if (select && select.value) {
                     const absId = select.dataset.absId;
-                    const absUsername = select.dataset.absUsername;
                     const jfId = select.value;
                     const jfUsername = select.options[select.selectedIndex].text;
 
-                    // Update the existing entry for this ABS user (preserves AbsToken).
+                    // Update the existing entry for this ABS user (preserves absToken).
                     // Pushing a new entry would lose the token received from the server.
-                    const absEntry = userMatches.find(m => (m.AbsUserId || m.absUserId) === absId);
+                    const absEntry = userMatches.find(function (m) {
+                        return (m.absUserId || m.AbsUserId) === absId;
+                    });
                     if (absEntry) {
-                        absEntry.JellyfinUserId = jfId;
+                        absEntry.jellyfinUserId   = jfId;
+                        absEntry.JellyfinUserId   = jfId;
+                        absEntry.jellyfinUsername = jfUsername;
                         absEntry.JellyfinUsername = jfUsername;
+                        absEntry.isSelected = true;
                         absEntry.IsSelected = true;
                     }
                 }
@@ -567,12 +586,20 @@
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (data) {
             if (btn) btn.disabled = false;
-            status.textContent = 'Saved ' + data.SavedCount + ' mapping(s)';
+            var savedCount = data.savedCount !== undefined ? data.savedCount : (data.SavedCount || 0);
+            status.textContent = 'Saved ' + savedCount + ' mapping(s)';
             status.style.color = 'var(--success-color, green)';
-            notify('✅', 'Successfully saved ' + data.SavedCount + ' user mapping(s).');
+            notify('✅', 'Successfully saved ' + savedCount + ' user mapping(s).');
 
-            ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
-                renderUserTokenTable(page, config.UserTokenMap || {});
+            ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
+                var entries = config.UserTokenEntries || config.userTokenEntries || [];
+                var tokenMap = {};
+                entries.forEach(function (e) {
+                    var id  = e.UserId  || e.userId;
+                    var tok = e.Token   || e.token;
+                    if (id && tok) tokenMap[id] = tok;
+                });
+                renderUserTokenTable(page, tokenMap);
             });
         })
         .catch(function (err) {
@@ -663,14 +690,18 @@
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (data) {
             btn.disabled = false;
-            if (data.Success) {
+            // Jellyfin serializes with camelCase; accept both for safety
+            var ok  = data.success  !== undefined ? data.success  : data.Success;
+            var usr = data.username !== undefined ? data.username : data.Username;
+            var err = data.error    !== undefined ? data.error    : data.Error;
+            if (ok) {
                 status.style.color = 'var(--success-color, green)';
-                status.textContent = '✓ Connected as ' + (data.Username || 'unknown');
-                notify('✅', 'Connected to Audiobookshelf as ' + (data.Username || 'unknown') + '.');
+                status.textContent = '✓ Connected as ' + (usr || 'unknown');
+                notify('✅', 'Connected to Audiobookshelf as ' + (usr || 'unknown') + '.');
             } else {
                 status.style.color = 'var(--error-color, red)';
-                status.textContent = '✗ ' + (data.Error || 'Connection failed');
-                notify('❌', data.Error || 'Connection failed. Check URL and token.');
+                status.textContent = '✗ ' + (err || 'Connection failed');
+                notify('❌', err || 'Connection failed. Check URL and token.');
             }
         })
         .catch(function (err) {
@@ -681,17 +712,36 @@
         });
     }
 
-    // Attach listeners immediately — the script tag is inside data-role="page" so the
-    // elements exist when this runs. Also hook pageshow on both the page element and
-    // document to reload config whenever Jellyfin's SPA navigates back to this page.
+    // Attach listeners immediately — the script tag is inside data-role="page" so all
+    // sibling elements exist when this runs.
+    // Use currentScript.closest() as primary lookup (works even if getElementById fails
+    // in Jellyfin's SPA context), falling back to getElementById.
     (function init() {
-        var page = document.getElementById(pageId);
-        if (!page) return;
+        var page = (document.currentScript && document.currentScript.closest('[data-role="page"]'))
+                   || document.getElementById(pageId);
+        if (!page) {
+            // Absolute last resort: wait for Jellyfin SPA to fire viewshow
+            document.addEventListener('viewshow', function onView() {
+                var p = document.getElementById(pageId);
+                if (!p) return;
+                document.removeEventListener('viewshow', onView);
+                setupPage(p);
+            });
+            return;
+        }
 
-        // Reload config on every SPA visit
+        setupPage(page);
+    }());
+
+    function setupPage(page) {
+        // Reload config on every SPA visit.
+        // Guard the document-level listener against stacking (script re-runs on each SPA nav).
         function onPageShow() { loadConfig(page); }
         page.addEventListener('pageshow', onPageShow);
-        document.addEventListener('pageshow', onPageShow);
+        if (!window._absPageShowBound) {
+            window._absPageShowBound = true;
+            document.addEventListener('pageshow', onPageShow);
+        }
 
         // Wire buttons once — elements are present now
         page.querySelector('#absTestConnection').addEventListener('click', function () {
@@ -709,10 +759,12 @@
 
         // Load config for the initial render
         loadConfig(page);
-    }());
+    }
 
 }());
 </script>
+
+</div><!-- end data-role="page" -->
 
 </body>
 </html>

@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix script placed outside data-role=page (Jellyfin SPA never executed it so buttons never wired); fix API response camelCase property reads (Success/Matches/SavedCount were undefined); fix saveUserMappings token refresh (wrong property); guard document-level listeners against stacking on SPA re-navigation.",
+        "checksum": "2fd78340c26a841bcfe50a7a2f76ac05",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.2.2/Jellyfin.Plugin.Audiobookshelf_1.1.2.2.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-10T00:00:00Z",
+        "version": "1.1.2.2"
+      },
+      {
         "changelog": "Fix button handlers and config reload: attach click listeners immediately at script execution (not inside pageshow on document which Jellyfin SPA does not reliably fire); hook pageshow on the page element itself so fields repopulate on return visits.",
         "checksum": "6e38864caf3e47739a9b960ae9c368f4",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.2.1/Jellyfin.Plugin.Audiobookshelf_1.1.2.1.zip",
