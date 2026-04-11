@@ -211,7 +211,6 @@
     var pluginGuid = '7b2f4a1d-e3c0-4e8b-9d5a-3f7c6b2e0a14';
     var pageId = 'audiobookshelfConfigPage';
     var userMatches = [];
-    var listenersAttached = false;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -682,29 +681,35 @@
         });
     }
 
-    document.addEventListener('pageshow', function (e) {
+    // Attach listeners immediately — the script tag is inside data-role="page" so the
+    // elements exist when this runs. Also hook pageshow on both the page element and
+    // document to reload config whenever Jellyfin's SPA navigates back to this page.
+    (function init() {
         var page = document.getElementById(pageId);
         if (!page) return;
 
+        // Reload config on every SPA visit
+        function onPageShow() { loadConfig(page); }
+        page.addEventListener('pageshow', onPageShow);
+        document.addEventListener('pageshow', onPageShow);
+
+        // Wire buttons once — elements are present now
+        page.querySelector('#absTestConnection').addEventListener('click', function () {
+            testConnection(page);
+        });
+
+        page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
+            ev.preventDefault();
+            saveConfig(page);
+        });
+
+        page.querySelector('#discoverUsers').addEventListener('click', function () {
+            discoverUsers(page);
+        });
+
+        // Load config for the initial render
         loadConfig(page);
-
-        if (!listenersAttached) {
-            listenersAttached = true;
-
-            page.querySelector('#absTestConnection').addEventListener('click', function () {
-                testConnection(page);
-            });
-
-            page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
-                ev.preventDefault();
-                saveConfig(page);
-            });
-
-            page.querySelector('#discoverUsers').addEventListener('click', function () {
-                discoverUsers(page);
-            });
-        }
-    });
+    }());
 
 }());
 </script>
