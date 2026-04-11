@@ -1,7 +1,7 @@
 ---
 name: "Audiobookshelf"
 guid: "7b2f4a1d-e3c0-4e8b-9d5a-3f7c6b2e0a14"
-version: "1.1.1.0"
+version: "1.1.2.0"
 targetAbi: "10.11.3.0"
 framework: "net9.0"
 overview: "Integrates Jellyfin with a self-hosted Audiobookshelf server"
@@ -14,4 +14,4 @@ owner: "SirFfej"
 artifacts:
   - "Jellyfin.Plugin.Audiobookshelf.dll"
 changelog: |
-  v1.1.1.0 - Bug fixes: SaveMappings token persistence, debounce race, URL handling
+  v1.1.2.0 - Fix token persistence: TokenVault was mutating a detached PluginConfiguration instance

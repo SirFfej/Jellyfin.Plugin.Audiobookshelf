@@ -12,31 +12,34 @@ namespace Jellyfin.Plugin.Audiobookshelf.Services;
 /// </summary>
 public class TokenVault
 {
-    private readonly PluginConfiguration _config;
     private readonly ILogger<TokenVault> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TokenVault"/> class.
     /// </summary>
-    public TokenVault(PluginConfiguration config, ILogger<TokenVault> logger)
+    public TokenVault(ILogger<TokenVault> logger)
     {
-        _config = config;
         _logger = logger;
     }
+
+    // Always access Plugin.Instance.Configuration directly — PluginConfiguration is not
+    // registered in the DI container, so constructor injection would yield a detached
+    // default instance that is never saved.
+    private static PluginConfiguration Config => Plugin.Instance!.Configuration;
 
     /// <summary>
     /// Stores an ABS API token for a Jellyfin user.
     /// </summary>
     public Task<bool> StoreTokenAsync(string jellyfinUserId, string absToken)
     {
-        var existing = _config.UserTokenEntries.FirstOrDefault(e => e.UserId == jellyfinUserId);
+        var existing = Config.UserTokenEntries.FirstOrDefault(e => e.UserId == jellyfinUserId);
         if (existing != null)
         {
             existing.Token = absToken;
         }
         else
         {
-            _config.UserTokenEntries.Add(new UserTokenEntry { UserId = jellyfinUserId, Token = absToken });
+            Config.UserTokenEntries.Add(new UserTokenEntry { UserId = jellyfinUserId, Token = absToken });
         }
 
         Plugin.Instance!.SaveConfiguration();
@@ -49,7 +52,7 @@ public class TokenVault
     /// </summary>
     public Task<string?> GetTokenAsync(string jellyfinUserId)
     {
-        var entry = _config.UserTokenEntries.FirstOrDefault(e => e.UserId == jellyfinUserId);
+        var entry = Config.UserTokenEntries.FirstOrDefault(e => e.UserId == jellyfinUserId);
         return Task.FromResult(entry?.Token);
     }
 
@@ -58,7 +61,7 @@ public class TokenVault
     /// </summary>
     public Task DeleteTokenAsync(string jellyfinUserId)
     {
-        _config.UserTokenEntries.RemoveAll(e => e.UserId == jellyfinUserId);
+        Config.UserTokenEntries.RemoveAll(e => e.UserId == jellyfinUserId);
         Plugin.Instance!.SaveConfiguration();
         _logger.LogDebug("Deleted ABS token for user {UserId}", jellyfinUserId);
         return Task.CompletedTask;

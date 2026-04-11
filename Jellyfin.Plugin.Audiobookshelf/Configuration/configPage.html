@@ -245,6 +245,17 @@
         if (ok) { setTimeout(function () { ok.focus(); }, 50); }
     }
 
+    // Notify via both mechanisms so we can confirm which one is visible in this environment.
+    // Each message is labelled with its source — whichever popup(s) appear tells us what works.
+    function notify(icon, message, title) {
+        showModal(icon, message + '\n\n[via: absModal]');
+        try {
+            Dashboard.alert({ title: (title || icon), message: message + '\n\n[via: Dashboard.alert]' });
+        } catch (e) {
+            // Dashboard.alert not available in this context
+        }
+    }
+
     function hideModal() {
         var modal = document.getElementById('absModal');
         if (modal) modal.style.display = 'none';
@@ -395,10 +406,7 @@
         if (!url || !token) {
             status.textContent = 'Server URL and Admin Token are required';
             status.style.color = 'var(--error-color, red)';
-            Dashboard.alert({
-                title: 'Missing Information',
-                message: 'Server URL and Admin Token are required.'
-            });
+            notify('⚠️', 'Server URL and Admin Token are required.');
             return;
         }
 
@@ -421,20 +429,14 @@
             renderUserMatches(page, data.Matches);
             status.textContent = 'Found ' + data.Matches.length + ' user(s)';
             status.style.color = 'var(--success-color, green)';
-            Dashboard.alert({
-                title: 'User Discovery Complete',
-                message: 'Found ' + data.Matches.length + ' matching user(s). Review matches above and save your selections.'
-            });
+            notify('✅', 'Found ' + data.Matches.length + ' matching user(s).\nReview the matches above and save your selections.');
         })
         .catch(function (err) {
             btn.disabled = false;
             console.error('Failed to discover users:', err);
             status.textContent = 'Discovery failed';
             status.style.color = 'var(--error-color, red)';
-            Dashboard.alert({
-                title: 'Discovery Failed',
-                message: 'Failed to discover users. Check the server URL and API token.'
-            });
+            notify('❌', 'Failed to discover users. Check the server URL and API token.');
         });
     }
 
@@ -546,10 +548,7 @@
         if (selected.length === 0) {
             status.textContent = 'No mappings selected';
             status.style.color = 'var(--error-color, red)';
-            Dashboard.alert({
-                title: 'No Mappings Selected',
-                message: 'Check at least one user pairing before saving.'
-            });
+            notify('⚠️', 'Check at least one user pairing before saving.');
             return;
         }
 
@@ -571,10 +570,7 @@
             if (btn) btn.disabled = false;
             status.textContent = 'Saved ' + data.SavedCount + ' mapping(s)';
             status.style.color = 'var(--success-color, green)';
-            Dashboard.alert({
-                title: 'User Mappings Saved',
-                message: 'Successfully saved ' + data.SavedCount + ' user mapping(s).'
-            });
+            notify('✅', 'Successfully saved ' + data.SavedCount + ' user mapping(s).');
 
             ApiClient.getPluginConfiguration(Plugin.Instance.Id).then(function (config) {
                 renderUserTokenTable(page, config.UserTokenMap || {});
@@ -585,10 +581,7 @@
             console.error('Failed to save mappings:', err);
             status.textContent = 'Save failed';
             status.style.color = 'var(--error-color, red)';
-            Dashboard.alert({
-                title: 'Save Failed',
-                message: 'Failed to save user mappings. Check server logs for details.'
-            });
+            notify('❌', 'Failed to save user mappings. Check server logs for details.');
         });
     }
 
@@ -611,38 +604,33 @@
             }
         });
 
-        // PascalCase matches C# property names; Jellyfin's JSON deserializer is
-        // case-insensitive but using the exact names avoids any edge-case ambiguity.
-        var body = {
-            AbsServerUrl:                url,
-            AdminApiToken:               token,
-            IncludedLibraryIds:          libIds ? libIds.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
-            ProgressSyncIntervalMinutes: interval,
-            EnableOutboundSync:          outbound,
-            EnableInboundSync:           inbound,
-            EnableMetadataProvider:      metadata,
-            EnablePodcastLibraries:      podcasts,
-            UserTokenEntries:            tokenEntries
-        };
+        // Use ApiClient.getPluginConfiguration first so we preserve any fields we
+        // don't render in the form (e.g. TitleMatchConfidenceThreshold), then
+        // overlay our form values and save via ApiClient.updatePluginConfiguration —
+        // the same pattern used by Jellyfin-Enhanced and the official plugin template.
+        Dashboard.showLoadingMsg();
 
-        // Direct fetch to the Jellyfin plugin config endpoint so we see the HTTP status.
-        var configUrl = ApiClient.getUrl('Plugins/' + getPluginId() + '/Configuration');
-        fetch(configUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'MediaBrowser Token="' + getJellyfinToken() + '"'
-            },
-            body: JSON.stringify(body)
+        ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
+            config.AbsServerUrl                = url;
+            config.AdminApiToken               = token;
+            config.IncludedLibraryIds          = libIds ? libIds.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+            config.ProgressSyncIntervalMinutes = interval;
+            config.EnableOutboundSync          = outbound;
+            config.EnableInboundSync           = inbound;
+            config.EnableMetadataProvider      = metadata;
+            config.EnablePodcastLibraries      = podcasts;
+            config.UserTokenEntries            = tokenEntries;
+
+            return ApiClient.updatePluginConfiguration(getPluginId(), config);
         })
-        .then(function (r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + r.statusText);
-            try { Dashboard.processPluginConfigurationUpdateResult(); } catch (e) {}
-            showModal('✅', 'Settings saved successfully.');
+        .then(function (result) {
+            Dashboard.processPluginConfigurationUpdateResult(result);
+            notify('✅', 'Settings saved successfully.');
         })
         .catch(function (err) {
+            Dashboard.hideLoadingMsg();
             console.error('[ABS] saveConfig failed:', err);
-            showModal('❌', 'Failed to save configuration.\n\n(' + err + ')');
+            notify('❌', 'Failed to save configuration.\n\n(' + err + ')');
         });
     }
 
@@ -657,10 +645,7 @@
         if (!url || !token) {
             status.textContent = 'Server URL and Admin Token are required';
             status.style.color = 'var(--error-color, red)';
-            Dashboard.alert({
-                title: 'Missing Information',
-                message: 'Server URL and Admin Token are required.'
-            });
+            notify('⚠️', 'Server URL and Admin Token are required.');
             return;
         }
 
@@ -682,27 +667,18 @@
             if (data.Success) {
                 status.style.color = 'var(--success-color, green)';
                 status.textContent = '✓ Connected as ' + (data.Username || 'unknown');
-                Dashboard.alert({
-                    title: 'Connection Successful',
-                    message: 'Connected to Audiobookshelf server as ' + (data.Username || 'unknown') + '.'
-                });
+                notify('✅', 'Connected to Audiobookshelf as ' + (data.Username || 'unknown') + '.');
             } else {
                 status.style.color = 'var(--error-color, red)';
                 status.textContent = '✗ ' + (data.Error || 'Connection failed');
-                Dashboard.alert({
-                    title: 'Connection Failed',
-                    message: data.Error || 'Connection failed. Check URL and token.'
-                });
+                notify('❌', data.Error || 'Connection failed. Check URL and token.');
             }
         })
         .catch(function (err) {
             btn.disabled = false;
             status.style.color = 'var(--error-color, red)';
             status.textContent = '✗ Connection failed — check URL and token';
-            Dashboard.alert({
-                title: 'Connection Failed',
-                message: 'Could not connect to the Audiobookshelf server. Check URL and token.'
-            });
+            notify('❌', 'Could not connect to the Audiobookshelf server. Check URL and token.');
         });
     }
 
