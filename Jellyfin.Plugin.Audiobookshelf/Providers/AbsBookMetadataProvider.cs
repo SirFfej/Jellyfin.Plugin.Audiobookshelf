@@ -25,7 +25,7 @@ namespace Jellyfin.Plugin.Audiobookshelf.Providers;
 /// Only active when <see cref="PluginConfiguration.EnableMetadataProvider"/> is <c>true</c>.
 /// Disable this when using the channel mode exclusively to avoid items appearing twice.
 /// </remarks>
-public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
+public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, IHasOrder
 {
     private static readonly Regex YearRegex = new(@"\b(\d{4})\b", RegexOptions.Compiled);
     private static readonly Regex HtmlStripRegex = new("<[^>]*>", RegexOptions.Compiled);
@@ -49,6 +49,12 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
 
     /// <inheritdoc />
     public string Name => "Audiobookshelf";
+
+    /// <summary>
+    /// Run before the default providers (order 0) so ABS metadata takes precedence
+    /// for audiobooks that are matched by this provider.
+    /// </summary>
+    public int Order => -1;
 
     // -------------------------------------------------------------------------
     // Search
@@ -80,6 +86,7 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
             results.Add(new RemoteSearchResult
             {
                 Name = item.Media.Metadata.Title,
+                Overview = StripHtml(item.Media.Metadata.Description),
                 ProductionYear = ParseYear(item.Media.Metadata.PublishedYear),
                 ImageUrl = $"{baseUrl}/api/items/{item.Id}/cover",
                 ProviderIds = BuildProviderIds(item),
@@ -131,7 +138,6 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
             absItem = ItemMatcher.FindBestMatch(
                 asin,
                 isbn,
-                info.Path,
                 info.Name,
                 authorName,
                 candidates,
@@ -184,7 +190,8 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>
 
         result.Item = book;
         result.HasMetadata = true;
-        result.QueriedById = true;
+        result.QueriedById = info.TryGetProviderId("Audiobookshelf", out _);
+        result.ResultLanguage = info.MetadataLanguage;
 
         // People: authors + narrators
         foreach (var author in meta.Authors)

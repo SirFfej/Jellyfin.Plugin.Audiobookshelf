@@ -35,30 +35,6 @@
             margin-right: 6px;
         }
         @keyframes loading-spin { to { transform: rotate(360deg); } }
-
-        /* Modal overlay — hidden by default via inline style, shown by JS */
-        #absModal {
-            position: fixed;
-            inset: 0;
-            z-index: 99999;
-            background: rgba(0,0,0,0.65);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #absModalBox {
-            background: var(--background-color, #1c1c1c);
-            border: 1px solid var(--border-color, #555);
-            border-radius: 8px;
-            padding: 28px 32px;
-            max-width: 440px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.7);
-        }
-        #absModalIcon    { font-size: 2.5em; margin-bottom: 12px; }
-        #absModalMessage { margin-bottom: 20px; line-height: 1.5; white-space: pre-wrap; }
-        #absModalOk      { min-width: 80px; cursor: pointer; }
     </style>
 
     <div data-role="content">
@@ -189,18 +165,6 @@
         </div>
     </div>
 
-    <!--
-        Modal is INSIDE data-role="page" (Jellyfin SPA renders only this element).
-        Hidden via inline style so it works regardless of whether the <style> block
-        above has been applied yet. JS removes/restores the inline style to show/hide.
-    -->
-    <div id="absModal" role="dialog" aria-modal="true" style="display:none;">
-        <div id="absModalBox">
-            <div id="absModalIcon"></div>
-            <div id="absModalMessage"></div>
-            <button is="emby-button" type="button" id="absModalOk" class="raised emby-button">OK</button>
-        </div>
-    </div>
 
 <script type="text/javascript">
 (function () {
@@ -228,50 +192,10 @@
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // ── Modal ─────────────────────────────────────────────────────────────────
-    // Hidden via inline style="display:none" — JS toggles that property directly
-    // rather than relying on CSS classes, so it works even if the stylesheet hasn't loaded.
+    // ── Notify ───────────────────────────────────────────────────────────────
 
-    function showModal(icon, message) {
-        var modal = document.getElementById('absModal');
-        if (!modal) { alert(icon + ' ' + message); return; }
-        document.getElementById('absModalIcon').textContent    = icon;
-        document.getElementById('absModalMessage').textContent = message;
-        modal.style.display = 'flex';
-        var ok = document.getElementById('absModalOk');
-        if (ok) { setTimeout(function () { ok.focus(); }, 50); }
-    }
-
-    // Notify via both mechanisms so we can confirm which one is visible in this environment.
-    // Each message is labelled with its source — whichever popup(s) appear tells us what works.
-    function notify(icon, message, title) {
-        showModal(icon, message + '\n\n[via: absModal]');
-        try {
-            Dashboard.alert({ title: (title || icon), message: message + '\n\n[via: Dashboard.alert]' });
-        } catch (e) {
-            // Dashboard.alert not available in this context
-        }
-    }
-
-    function hideModal() {
-        var modal = document.getElementById('absModal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    // Use a named function so we can guard against re-registration when Jellyfin
-    // SPA re-executes this script on each navigation to the config page.
-    if (!window._absModalClickBound) {
-        window._absModalClickBound = true;
-        document.addEventListener('click', function (e) {
-            if (e.target && e.target.id === 'absModalOk') hideModal();
-        });
-        document.addEventListener('keydown', function (e) {
-            if ((e.key === 'Escape' || e.key === 'Enter') &&
-                document.getElementById('absModal') &&
-                document.getElementById('absModal').style.display !== 'none') {
-                hideModal();
-            }
-        });
+    function notify(title, message) {
+        Dashboard.alert({ title: title, message: message });
     }
 
     // ── Load config ───────────────────────────────────────────────────────────
