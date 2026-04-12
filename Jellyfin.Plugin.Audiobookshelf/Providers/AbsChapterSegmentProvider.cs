@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Controller.Entities;
@@ -92,7 +91,7 @@ public class AbsChapterSegmentProvider : IMediaSegmentProvider
             {
                 Id = Guid.NewGuid(),
                 ItemId = request.ItemId,
-                Type = MediaSegmentType.Unknown,
+                // Type defaults to Unknown (0) — no direct reference to Jellyfin.Database.Implementations.Enums
                 StartTicks = TimeHelper.SecondsToTicks(chapter.Start),
                 EndTicks = TimeHelper.SecondsToTicks(chapter.End)
             });

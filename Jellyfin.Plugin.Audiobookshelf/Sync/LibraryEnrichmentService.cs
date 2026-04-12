@@ -1,23 +1,21 @@
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Audiobookshelf.Sync;
 
 /// <summary>
-/// Hosted service that subscribes to <see cref="ILibraryManager.ItemAdded"/> and
+/// Singleton service that subscribes to <see cref="ILibraryManager.ItemAdded"/> and
 /// queues an ABS metadata refresh for any newly scanned audiobook that hasn't been
 /// matched yet. This removes the requirement to manually trigger a metadata refresh
 /// after a library scan.
+/// Follows the same constructor-subscription pattern as <see cref="ProgressSyncService"/>.
 /// </summary>
-public sealed partial class LibraryEnrichmentService : IHostedService, IDisposable
+public sealed partial class LibraryEnrichmentService : IDisposable
 {
     private readonly ILibraryManager _libraryManager;
     private readonly IProviderManager _providerManager;
@@ -37,21 +35,9 @@ public sealed partial class LibraryEnrichmentService : IHostedService, IDisposab
         _providerManager = providerManager;
         _fileSystem = fileSystem;
         _logger = logger;
-    }
 
-    /// <inheritdoc />
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
         _libraryManager.ItemAdded += OnItemAdded;
         LogStarted(_logger);
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc />
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        _libraryManager.ItemAdded -= OnItemAdded;
-        return Task.CompletedTask;
     }
 
     private void OnItemAdded(object? sender, ItemChangeEventArgs e)

@@ -1,8 +1,8 @@
 ---
 name: "Audiobookshelf"
 guid: "7b2f4a1d-e3c0-4e8b-9d5a-3f7c6b2e0a14"
-version: "1.1.4.2"
-targetAbi: "10.11.8.0"
+version: "1.1.4.3"
+targetAbi: "10.11.3.0"
 framework: "net9.0"
 overview: "Integrates Jellyfin with a self-hosted Audiobookshelf server"
 description: >
@@ -14,4 +14,4 @@ owner: "SirFfej"
 artifacts:
   - "Jellyfin.Plugin.Audiobookshelf.dll"
 changelog: |
-  v1.1.4.2 - Recompile against Jellyfin 10.11.8 to fix TypeLoadException causing NotSupported on servers running 10.11.8+.
+  v1.1.4.3 - Fix NotSupported on load: replace AddHostedService with plain singleton for LibraryEnrichmentService; remove explicit AbsLinkCleanupTask DI registration (auto-discovered); drop direct Jellyfin.Database.Implementations.Enums reference from AbsChapterSegmentProvider; revert to 10.11.3 compile target.

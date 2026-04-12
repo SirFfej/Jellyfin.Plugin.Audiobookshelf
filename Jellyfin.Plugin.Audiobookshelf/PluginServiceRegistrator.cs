@@ -45,13 +45,15 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<TokenVault>();
         serviceCollection.AddSingleton<UserMappingService>();
 
-        // Automatic metadata enrichment on library scan
-        serviceCollection.AddHostedService<LibraryEnrichmentService>();
+        // Automatic metadata enrichment on library scan — subscribes to ItemAdded in constructor,
+        // same pattern as ProgressSyncService (plain singleton, not IHostedService).
+        serviceCollection.AddSingleton<LibraryEnrichmentService>();
 
-        // ABS chapters exposed as Jellyfin media segments for chapter navigation
+        // ABS chapters exposed as Jellyfin media segments for chapter navigation.
+        // Jellyfin discovers IMediaSegmentProvider implementations via DI.
         serviceCollection.AddSingleton<IMediaSegmentProvider, AbsChapterSegmentProvider>();
 
-        // Broken link repair — weekly scheduled task
-        serviceCollection.AddSingleton<AbsLinkCleanupTask>();
+        // AbsLinkCleanupTask (IScheduledTask) is auto-discovered by Jellyfin via reflection —
+        // no explicit DI registration needed.
     }
 }
