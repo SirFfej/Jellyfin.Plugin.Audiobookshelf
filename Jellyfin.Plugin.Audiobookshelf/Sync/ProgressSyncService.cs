@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -14,11 +15,15 @@ namespace Jellyfin.Plugin.Audiobookshelf.Sync;
 /// Pushes Jellyfin playback progress to Audiobookshelf in real time.
 /// Subscribes to <see cref="IUserDataManager.UserDataSaved"/> and debounces
 /// updates per-item (10 s) to avoid hammering the ABS server.
+/// Also subscribes to <see cref="ISessionManager.PlaybackStopped"/> and
+/// <see cref="ISessionManager.PlaybackProgress"/> (for pause detection) to
+/// push progress immediately on stop or pause without waiting for the debounce.
 /// </summary>
 public sealed partial class ProgressSyncService : IDisposable
 {
     private readonly AbsApiClientFactory _clientFactory;
     private readonly IUserDataManager _userDataManager;
+    private readonly ISessionManager _sessionManager;
     private readonly ILogger<ProgressSyncService> _logger;
 
     // Debounce: one pending CTS per (userId, absItemId)
@@ -32,13 +37,17 @@ public sealed partial class ProgressSyncService : IDisposable
     public ProgressSyncService(
         AbsApiClientFactory clientFactory,
         IUserDataManager userDataManager,
+        ISessionManager sessionManager,
         ILogger<ProgressSyncService> logger)
     {
         _clientFactory = clientFactory;
         _userDataManager = userDataManager;
+        _sessionManager = sessionManager;
         _logger = logger;
 
         _userDataManager.UserDataSaved += OnUserDataSaved;
+        _sessionManager.PlaybackStopped += OnPlaybackStopped;
+        _sessionManager.PlaybackProgress += OnPlaybackProgress;
         LogStarted(_logger);
     }
 
@@ -118,10 +127,95 @@ public sealed partial class ProgressSyncService : IDisposable
         }, cts.Token);
     }
 
+    private void OnPlaybackStopped(object? sender, PlaybackStopEventArgs e)
+    {
+        // Push final position to ABS immediately when playback stops,
+        // without waiting for the 10 s debounce.
+        PushImmediately(e);
+    }
+
+    private void OnPlaybackProgress(object? sender, PlaybackProgressEventArgs e)
+    {
+        // Push current position immediately when the user pauses.
+        if (!e.IsPaused)
+        {
+            return;
+        }
+
+        PushImmediately(e);
+    }
+
+    private void PushImmediately(PlaybackProgressEventArgs e)
+    {
+        if (Plugin.Instance?.Configuration.EnableOutboundSync != true)
+        {
+            return;
+        }
+
+        if (e.Item is null || e.Session is null)
+        {
+            return;
+        }
+
+        if (!e.Item.TryGetProviderId("Audiobookshelf", out string? absItemId)
+            || string.IsNullOrWhiteSpace(absItemId))
+        {
+            return;
+        }
+
+        string userId = e.Session.UserId.ToString("N");
+        double currentSecs = e.PlaybackPositionTicks.HasValue
+            ? TimeHelper.TicksToSeconds(e.PlaybackPositionTicks.Value)
+            : 0;
+        bool isFinished = e is PlaybackStopEventArgs stop && stop.PlayedToCompletion;
+        double duration = e.Item.RunTimeTicks.HasValue
+            ? TimeHelper.TicksToSeconds(e.Item.RunTimeTicks.Value)
+            : 0;
+
+        string debounceKey = $"{userId}:{absItemId}";
+
+        // Cancel any pending debounced update — this immediate push supersedes it.
+        if (_pending.TryRemove(debounceKey, out var existingCts))
+        {
+            existingCts.Cancel();
+            existingCts.Dispose();
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var client = _clientFactory.GetClientForUser(userId);
+                bool ok = await client.UpdateProgressAsync(
+                    absItemId,
+                    currentSecs,
+                    duration,
+                    isFinished,
+                    hideFromContinueListening: false,
+                    markAsFinishedTimeRemaining: 10,
+                    lastUpdate: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    episodeId: null,
+                    CancellationToken.None)
+                    .ConfigureAwait(false);
+
+                if (!ok)
+                {
+                    LogProgressUpdateFailed(_logger, absItemId, userId);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogProgressSyncError(_logger, ex, absItemId);
+            }
+        });
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {
         _userDataManager.UserDataSaved -= OnUserDataSaved;
+        _sessionManager.PlaybackStopped -= OnPlaybackStopped;
+        _sessionManager.PlaybackProgress -= OnPlaybackProgress;
 
         foreach (var cts in _pending.Values)
         {

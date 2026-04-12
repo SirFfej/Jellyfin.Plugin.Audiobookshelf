@@ -18,7 +18,7 @@ namespace Jellyfin.Plugin.Audiobookshelf.Providers;
 /// The ABS cover endpoint (<c>/api/items/:id/cover</c>) does not require authentication,
 /// so the image URL can be passed directly to Jellyfin without embedding a token.
 /// </remarks>
-public class AbsImageProvider : IRemoteImageProvider
+public class AbsImageProvider : IRemoteImageProvider, IHasOrder
 {
     private readonly AbsApiClientFactory _clientFactory;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -39,6 +39,12 @@ public class AbsImageProvider : IRemoteImageProvider
 
     /// <inheritdoc />
     public string Name => "Audiobookshelf";
+
+    /// <summary>
+    /// Run before the built-in ffmpeg image extractor (order 0) so ABS cover art
+    /// is used directly and ffmpeg is never invoked on large audiobook files.
+    /// </summary>
+    public int Order => -1;
 
     /// <inheritdoc />
     public bool Supports(BaseItem item) => item is Book;

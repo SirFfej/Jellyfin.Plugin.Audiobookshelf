@@ -658,30 +658,33 @@
     }());
 
     function setupPage(page) {
-        // Reload config on every SPA visit.
-        // Guard the document-level listener against stacking (script re-runs on each SPA nav).
-        function onPageShow() { loadConfig(page); }
-        page.addEventListener('pageshow', onPageShow);
-        if (!window._absPageShowBound) {
-            window._absPageShowBound = true;
-            document.addEventListener('pageshow', onPageShow);
+        // Wire buttons only once — script re-executes on every SPA navigation to this
+        // page, so without this guard each visit stacks another click listener onto the
+        // same elements, causing one click to fire N handlers and show N popups.
+        if (!window._absListenersBound) {
+            window._absListenersBound = true;
+
+            page.querySelector('#absTestConnection').addEventListener('click', function () {
+                testConnection(page);
+            });
+
+            page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
+                ev.preventDefault();
+                saveConfig(page);
+            });
+
+            page.querySelector('#discoverUsers').addEventListener('click', function () {
+                discoverUsers(page);
+            });
+
+            // Reload config on every SPA return visit (element-level pageshow).
+            page.addEventListener('pageshow', function () { loadConfig(page); });
+
+            // Document-level pageshow as belt-and-suspenders for some Jellyfin SPA versions.
+            document.addEventListener('pageshow', function () { loadConfig(page); });
         }
 
-        // Wire buttons once — elements are present now
-        page.querySelector('#absTestConnection').addEventListener('click', function () {
-            testConnection(page);
-        });
-
-        page.querySelector('#absConfigForm').addEventListener('submit', function (ev) {
-            ev.preventDefault();
-            saveConfig(page);
-        });
-
-        page.querySelector('#discoverUsers').addEventListener('click', function () {
-            discoverUsers(page);
-        });
-
-        // Load config for the initial render
+        // Always load config on the initial render of this script execution.
         loadConfig(page);
     }
 

@@ -1,9 +1,11 @@
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Logging;
+using Jellyfin.Plugin.Audiobookshelf.Providers;
 using Jellyfin.Plugin.Audiobookshelf.Services;
 using Jellyfin.Plugin.Audiobookshelf.Sync;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.MediaSegments;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -42,5 +44,11 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<ProgressSyncService>();
         serviceCollection.AddSingleton<TokenVault>();
         serviceCollection.AddSingleton<UserMappingService>();
+
+        // Automatic metadata enrichment on library scan
+        serviceCollection.AddHostedService<LibraryEnrichmentService>();
+
+        // ABS chapters exposed as Jellyfin media segments for chapter navigation
+        serviceCollection.AddSingleton<IMediaSegmentProvider, AbsChapterSegmentProvider>();
     }
 }

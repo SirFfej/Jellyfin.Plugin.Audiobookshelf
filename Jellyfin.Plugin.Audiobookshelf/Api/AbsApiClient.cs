@@ -401,6 +401,12 @@ public class AbsApiClient
                     .GetFromJsonAsync<T>(relativeUrl, JsonOptions, ct)
                     .ConfigureAwait(false);
             }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // 404 = resource genuinely doesn't exist (e.g. no progress record yet) — not an error
+                _logger.LogDebug("ABS returned 404 for GET {Url} — treating as no data", relativeUrl);
+                return null;
+            }
             catch (HttpRequestException ex) when (attempt < maxRetries - 1)
             {
                 lastException = ex;
