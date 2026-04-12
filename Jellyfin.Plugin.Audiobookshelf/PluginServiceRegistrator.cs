@@ -50,5 +50,8 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 
         // ABS chapters exposed as Jellyfin media segments for chapter navigation
         serviceCollection.AddSingleton<IMediaSegmentProvider, AbsChapterSegmentProvider>();
+
+        // Broken link repair — weekly scheduled task
+        serviceCollection.AddSingleton<AbsLinkCleanupTask>();
     }
 }

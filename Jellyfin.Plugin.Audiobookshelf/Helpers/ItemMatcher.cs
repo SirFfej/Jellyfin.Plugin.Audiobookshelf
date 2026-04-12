@@ -41,6 +41,7 @@ public static class ItemMatcher
         if (!string.IsNullOrWhiteSpace(asin))
         {
             var match = absItems.FirstOrDefault(i =>
+                !i.IsMissing &&
                 string.Equals(i.Media.Metadata.Asin, asin, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
@@ -52,6 +53,7 @@ public static class ItemMatcher
         if (!string.IsNullOrWhiteSpace(isbn))
         {
             var match = absItems.FirstOrDefault(i =>
+                !i.IsMissing &&
                 string.Equals(i.Media.Metadata.Isbn, isbn, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
@@ -77,7 +79,7 @@ public static class ItemMatcher
 
         string normalisedQuery = NormaliseTitle(title);
 
-        foreach (var item in absItems)
+        foreach (var item in absItems.Where(i => !i.IsMissing))
         {
             string absRawTitle    = item.Media.Metadata.Title;
             string absNormTitle   = NormaliseTitle(absRawTitle);
