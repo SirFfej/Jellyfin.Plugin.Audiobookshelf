@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix TypeLoadException on plugin load: remove IMediaSegmentProvider implementation (MediaSegmentDto.Type transitively references Jellyfin.Database.Implementations.Enums unavailable in plugin load context); revert ProgressSyncService to UserDataSaved-only debounce (remove ISessionManager dependency).",
+        "checksum": "5878afc52c859aeb0cb372906dc63fb8",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.4/Jellyfin.Plugin.Audiobookshelf_1.1.4.4.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-12T00:00:00Z",
+        "version": "1.1.4.4"
+      },
+      {
         "changelog": "Fix NotSupported on load: replace AddHostedService with plain singleton for LibraryEnrichmentService; remove explicit AbsLinkCleanupTask DI registration (auto-discovered); drop direct Jellyfin.Database.Implementations.Enums reference from AbsChapterSegmentProvider.",
         "checksum": "8ebae3a9c0baef509f6c10102ce680b8",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.3/Jellyfin.Plugin.Audiobookshelf_1.1.4.3.zip",

@@ -1,11 +1,9 @@
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Logging;
-using Jellyfin.Plugin.Audiobookshelf.Providers;
 using Jellyfin.Plugin.Audiobookshelf.Services;
 using Jellyfin.Plugin.Audiobookshelf.Sync;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
-using MediaBrowser.Controller.MediaSegments;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -48,10 +46,6 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // Automatic metadata enrichment on library scan — subscribes to ItemAdded in constructor,
         // same pattern as ProgressSyncService (plain singleton, not IHostedService).
         serviceCollection.AddSingleton<LibraryEnrichmentService>();
-
-        // ABS chapters exposed as Jellyfin media segments for chapter navigation.
-        // Jellyfin discovers IMediaSegmentProvider implementations via DI.
-        serviceCollection.AddSingleton<IMediaSegmentProvider, AbsChapterSegmentProvider>();
 
         // AbsLinkCleanupTask (IScheduledTask) is auto-discovered by Jellyfin via reflection —
         // no explicit DI registration needed.
