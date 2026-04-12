@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix TypeLoadException (NotSupported) on Jellyfin 10.11.8 servers: recompile against 10.11.8 API.",
+        "checksum": "42572418a2864e500c00f24d9fb4814a",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.2/Jellyfin.Plugin.Audiobookshelf_1.1.4.2.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-12T00:00:00Z",
+        "version": "1.1.4.2"
+      },
+      {
         "changelog": "Add scheduled cleanup task (Repair Broken Links) that detects stale ABS provider IDs, re-matches against live ABS library, and writes a per-run report to the log directory; filter missing ABS items from all match candidates.",
         "checksum": "5612ecf88ae16fac616abf6ab05aed04",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.1/Jellyfin.Plugin.Audiobookshelf_1.1.4.1.zip",
