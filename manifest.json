@@ -10,7 +10,7 @@
     "versions": [
       {
         "changelog": "Fix TypeLoadException: rewrite LibraryEnrichmentService to resolve IProviderManager and IFileSystem lazily via IServiceProvider (method-body scope) instead of typed fields, keeping class-level type signature minimal for CLR assembly scan.",
-        "checksum": "f2ff41a6f997039ac37caa6ef736dd14",
+        "checksum": "402f9937e39f40f81279c66d2a9c6c88",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.5/Jellyfin.Plugin.Audiobookshelf_1.1.4.5.zip",
         "targetAbi": "10.11.3.0",
         "timestamp": "2026-04-12T00:00:00Z",
