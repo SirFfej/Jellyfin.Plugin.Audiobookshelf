@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix TypeLoadException: rewrite LibraryEnrichmentService to resolve IProviderManager and IFileSystem lazily via IServiceProvider (method-body scope) instead of typed fields, keeping class-level type signature minimal for CLR assembly scan.",
+        "checksum": "f2ff41a6f997039ac37caa6ef736dd14",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.5/Jellyfin.Plugin.Audiobookshelf_1.1.4.5.zip",
+        "targetAbi": "10.11.3.0",
+        "timestamp": "2026-04-12T00:00:00Z",
+        "version": "1.1.4.5"
+      },
+      {
         "changelog": "Fix TypeLoadException on plugin load: remove IMediaSegmentProvider implementation (MediaSegmentDto.Type transitively references Jellyfin.Database.Implementations.Enums unavailable in plugin load context); revert ProgressSyncService to UserDataSaved-only debounce (remove ISessionManager dependency).",
         "checksum": "5878afc52c859aeb0cb372906dc63fb8",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.4/Jellyfin.Plugin.Audiobookshelf_1.1.4.4.zip",

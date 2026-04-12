@@ -4,6 +4,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Audiobookshelf.Sync;
@@ -11,15 +12,18 @@ namespace Jellyfin.Plugin.Audiobookshelf.Sync;
 /// <summary>
 /// Singleton service that subscribes to <see cref="ILibraryManager.ItemAdded"/> and
 /// queues an ABS metadata refresh for any newly scanned audiobook that hasn't been
-/// matched yet. This removes the requirement to manually trigger a metadata refresh
-/// after a library scan.
-/// Follows the same constructor-subscription pattern as <see cref="ProgressSyncService"/>.
+/// matched yet.
+/// <para>
+/// <see cref="IProviderManager"/> and <see cref="IFileSystem"/> are resolved lazily
+/// from <see cref="IServiceProvider"/> inside the event handler (method-body scope)
+/// rather than held as typed fields. This keeps the class-level type signature minimal
+/// so the CLR can load the type even if those interfaces are unavailable at scan time.
+/// </para>
 /// </summary>
 public sealed partial class LibraryEnrichmentService : IDisposable
 {
     private readonly ILibraryManager _libraryManager;
-    private readonly IProviderManager _providerManager;
-    private readonly IFileSystem _fileSystem;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<LibraryEnrichmentService> _logger;
 
     /// <summary>
@@ -27,13 +31,11 @@ public sealed partial class LibraryEnrichmentService : IDisposable
     /// </summary>
     public LibraryEnrichmentService(
         ILibraryManager libraryManager,
-        IProviderManager providerManager,
-        IFileSystem fileSystem,
+        IServiceProvider serviceProvider,
         ILogger<LibraryEnrichmentService> logger)
     {
         _libraryManager = libraryManager;
-        _providerManager = providerManager;
-        _fileSystem = fileSystem;
+        _serviceProvider = serviceProvider;
         _logger = logger;
 
         _libraryManager.ItemAdded += OnItemAdded;
@@ -52,18 +54,27 @@ public sealed partial class LibraryEnrichmentService : IDisposable
             return;
         }
 
-        // Already matched — metadata refresh will use the fast provider-ID path.
-        // No need to queue again; avoids duplicate refreshes for re-scanned items.
+        // Already matched — no need to queue again.
         if (book.TryGetProviderId("Audiobookshelf", out _))
+        {
+            return;
+        }
+
+        // Resolve lazily so these types are only accessed at JIT time, not during
+        // the CLR's type-load scan of the assembly.
+        var providerManager = _serviceProvider.GetService<IProviderManager>();
+        var fileSystem = _serviceProvider.GetService<IFileSystem>();
+
+        if (providerManager is null || fileSystem is null)
         {
             return;
         }
 
         LogQueueingRefresh(_logger, book.Name);
 
-        _providerManager.QueueRefresh(
+        providerManager.QueueRefresh(
             book.Id,
-            new MetadataRefreshOptions(new DirectoryService(_fileSystem))
+            new MetadataRefreshOptions(new DirectoryService(fileSystem))
             {
                 MetadataRefreshMode = MetadataRefreshMode.Default,
                 ImageRefreshMode = MetadataRefreshMode.Default

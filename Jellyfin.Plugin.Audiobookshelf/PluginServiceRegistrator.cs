@@ -43,8 +43,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<TokenVault>();
         serviceCollection.AddSingleton<UserMappingService>();
 
-        // Automatic metadata enrichment on library scan — subscribes to ItemAdded in constructor,
-        // same pattern as ProgressSyncService (plain singleton, not IHostedService).
+        // Automatic metadata enrichment on library scan — subscribes to ItemAdded in constructor.
+        // IProviderManager/IFileSystem resolved lazily via IServiceProvider to avoid type-load
+        // failures during Jellyfin's assembly scan.
         serviceCollection.AddSingleton<LibraryEnrichmentService>();
 
         // AbsLinkCleanupTask (IScheduledTask) is auto-discovered by Jellyfin via reflection —
