@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Recompile against Jellyfin 10.11.8 NuGet packages (was 10.11.3); update targetAbi to 10.11.8.0 to match runtime and eliminate interface ABI mismatch as the source of TypeLoadException on RegisterServices.",
+        "checksum": "1fbdfa35a757e57d9da56218bd9b9ef5",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.6/Jellyfin.Plugin.Audiobookshelf_1.1.4.6.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-12T00:00:00Z",
+        "version": "1.1.4.6"
+      },
+      {
         "changelog": "Fix TypeLoadException: rewrite LibraryEnrichmentService to resolve IProviderManager and IFileSystem lazily via IServiceProvider (method-body scope) instead of typed fields, keeping class-level type signature minimal for CLR assembly scan.",
         "checksum": "402f9937e39f40f81279c66d2a9c6c88",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.4.5/Jellyfin.Plugin.Audiobookshelf_1.1.4.5.zip",
