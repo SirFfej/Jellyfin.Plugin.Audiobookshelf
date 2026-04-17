@@ -13,6 +13,10 @@ This includes:
 
 Always stop and ask before executing any of these steps, even if the work leading up to them is complete.
 
+## No Automatic Releases
+
+**All releases must be explicitly requested by the user.** Never create releases, push tags, or update GitHub releases automatically based on version number changes or any other triggers.
+
 ## Release Artifact Location
 
 All `.zip` release artifacts must be placed in `C:\Users\SirFfej\CodeEtAl\Mine-Modified\Jellyfin.Plugin.Audiobookshelf\dist\` — never in the repo root or any other location.
