@@ -109,13 +109,31 @@ public partial class AbsLinkCleanupTask : IScheduledTask
         await report.WriteLineAsync().ConfigureAwait(false);
 
         // ── Step 1: collect all Jellyfin books with an ABS provider ID ────────
-        var linkedBooks = _libraryManager.GetItemList(new InternalItemsQuery
+        var config = Plugin.Instance!.Configuration;
+        var includedLibraryIds = config.IncludedLibraryIds;
+
+        var linkedBooksQuery = new InternalItemsQuery
         {
             HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
             Recursive = true
-        })
-        .OfType<Book>()
-        .ToList();
+        };
+
+        if (includedLibraryIds.Count > 0)
+        {
+            var topParentGuids = includedLibraryIds
+                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+                .Where(g => g != Guid.Empty)
+                .ToArray();
+
+            if (topParentGuids.Length > 0)
+            {
+                linkedBooksQuery.TopParentIds = topParentGuids;
+            }
+        }
+
+        var linkedBooks = _libraryManager.GetItemList(linkedBooksQuery)
+            .OfType<Book>()
+            .ToList();
 
         if (linkedBooks.Count == 0)
         {

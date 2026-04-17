@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix all scheduled tasks to respect selected Jellyfin libraries: Link Unmatched Items, Repair Broken Links, Refresh Metadata, Sync Chapters, Inbound Sync, and Outbound Sync now only process items from selected libraries.",
+        "checksum": "90636eb9152217bd022393613377c713",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.5/Jellyfin.Plugin.Audiobookshelf_1.1.5.5.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-17T03:15:00Z",
+        "version": "1.1.5.5"
+      },
+      {
         "changelog": "Add JellyfinMetadataReader: reads metadata.json from audiobook folder for fallback metadata (ASIN, ISBN, Author); add path-based author extraction when metadata.json not available; enriched matching uses folder metadata when Jellyfin lacks provider IDs.",
         "checksum": "14c15e96b08b853375733c6f60e7d841",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.4/Jellyfin.Plugin.Audiobookshelf_1.1.5.4.zip",

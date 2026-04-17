@@ -121,14 +121,30 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
 
         var config = Plugin.Instance!.Configuration;
 
+        var includedLibraryIds = config.IncludedLibraryIds;
+        var query = new InternalItemsQuery
+        {
+            Recursive = true,
+            MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
+        };
+
+        if (includedLibraryIds.Count > 0)
+        {
+            var topParentGuids = includedLibraryIds
+                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+                .Where(g => g != Guid.Empty)
+                .ToArray();
+
+            if (topParentGuids.Length > 0)
+            {
+                query.TopParentIds = topParentGuids;
+            }
+        }
+
         List<BaseItem> booksWithoutAbsId;
         try
         {
-            booksWithoutAbsId = _libraryManager.GetItemList(new InternalItemsQuery
-                {
-                    Recursive = true,
-                    MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
-                })
+            booksWithoutAbsId = _libraryManager.GetItemList(query)
                 .Where(item => !item.TryGetProviderId("Audiobookshelf", out _))
                 .ToList();
         }

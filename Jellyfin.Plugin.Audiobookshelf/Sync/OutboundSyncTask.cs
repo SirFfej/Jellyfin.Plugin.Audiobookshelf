@@ -165,12 +165,30 @@ public partial class OutboundSyncTask : IScheduledTask
 
         var absClient = _clientFactory.GetClientForToken(absToken);
 
-        // Find all Jellyfin items that have an ABS provider ID
-        var absItems = _libraryManager.GetItemList(new InternalItemsQuery
+        var config = Plugin.Instance!.Configuration;
+        var includedLibraryIds = config.IncludedLibraryIds;
+
+        var query = new InternalItemsQuery
         {
             HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
             Recursive = true
-        });
+        };
+
+        if (includedLibraryIds.Count > 0)
+        {
+            var topParentGuids = includedLibraryIds
+                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+                .Where(g => g != Guid.Empty)
+                .ToArray();
+
+            if (topParentGuids.Length > 0)
+            {
+                query.TopParentIds = topParentGuids;
+            }
+        }
+
+        // Find all Jellyfin items that have an ABS provider ID
+        var absItems = _libraryManager.GetItemList(query);
 
         foreach (var item in absItems)
         {

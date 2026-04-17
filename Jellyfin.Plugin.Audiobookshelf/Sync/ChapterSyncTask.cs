@@ -78,11 +78,28 @@ public partial class ChapterSyncTask : IScheduledTask
 
         var adminClient = _clientFactory.GetAdminClient();
 
-        var items = _libraryManager.GetItemList(new InternalItemsQuery
+        var includedLibraryIds = config.IncludedLibraryIds;
+
+        var query = new InternalItemsQuery
         {
             HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
             Recursive = true
-        });
+        };
+
+        if (includedLibraryIds.Count > 0)
+        {
+            var topParentGuids = includedLibraryIds
+                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+                .Where(g => g != Guid.Empty)
+                .ToArray();
+
+            if (topParentGuids.Length > 0)
+            {
+                query.TopParentIds = topParentGuids;
+            }
+        }
+
+        var items = _libraryManager.GetItemList(query);
 
         if (items.Count == 0)
         {
