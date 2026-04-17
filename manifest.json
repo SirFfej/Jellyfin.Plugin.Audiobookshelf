@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Add AssemblyVersion to fix Jellyfin showing incorrect plugin version; add scheduled task (Refresh Metadata) to periodically sync metadata from ABS; replace library ID text input with interactive library selection checkboxes that auto-load on connection test, defaulting to book-type libraries.",
+        "checksum": "bcffe52bac8c7dcfc37dbf3620590a10",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.2/Jellyfin.Plugin.Audiobookshelf_1.1.5.2.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-16T19:30:00Z",
+        "version": "1.1.5.2"
+      },
+      {
         "changelog": "Fix Link Unmatched Items task: filter to Book library type only to avoid deserializing unknown item types; add error logging with exception details for better diagnostics.",
         "checksum": "f3942ae30f21b3156a574dcabc4565e8",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.1/Jellyfin.Plugin.Audiobookshelf_1.1.5.1.zip",
