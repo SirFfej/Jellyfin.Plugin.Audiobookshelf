@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix library selection: show Jellyfin book/audio libraries instead of ABS libraries; fix config save error (libIds.split); show library selection on config page load; support both book and audio library types.",
+        "checksum": "e7f917d7fcfc08ae6e6e46263f26f769",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.3/Jellyfin.Plugin.Audiobookshelf_1.1.5.3.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-16T20:00:00Z",
+        "version": "1.1.5.3"
+      },
+      {
         "changelog": "Add AssemblyVersion to fix Jellyfin showing incorrect plugin version; add scheduled task (Refresh Metadata) to periodically sync metadata from ABS; replace library ID text input with interactive library selection checkboxes that auto-load on connection test, defaulting to book-type libraries.",
         "checksum": "6fb78c7107e322a143dd0bedf82995cb",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.2/Jellyfin.Plugin.Audiobookshelf_1.1.5.2.zip",
