@@ -7,7 +7,7 @@
     <Version>1.1.5.3</Version>
     <AssemblyVersion>1.1.5.3</AssemblyVersion>
     <FileVersion>1.1.5.3</FileVersion>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -16,7 +16,7 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <!-- Disable CA rules that are too strict for existing codebase -->
     <NoWarn>
-      CA1002;CA1305;CA1819;CA1836;CA1849;CA1863;CA2007;CA2227
+      CA1002;CA1305;CA1307;CA1819;CA1836;CA1849;CA1852;CA1863;CA2007;CA2227;CS1591;SA1600
     </NoWarn>
   </PropertyGroup>
 

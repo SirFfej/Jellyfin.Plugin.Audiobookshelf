@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Common.Configuration;
@@ -31,6 +32,7 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
     private readonly IProviderManager _providerManager;
     private readonly IFileSystem _fileSystem;
     private readonly IApplicationPaths _appPaths;
+    private readonly JellyfinMetadataReader _metadataReader;
     private readonly ILogger<AbsLinkRetryTask> _logger;
 
     /// <summary>
@@ -49,6 +51,7 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
         _providerManager = providerManager;
         _fileSystem = fileSystem;
         _appPaths = appPaths;
+        _metadataReader = new JellyfinMetadataReader(logger);
         _logger = logger;
     }
 
@@ -118,14 +121,25 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
 
         var config = Plugin.Instance!.Configuration;
 
-        var allItems = _libraryManager.GetItemList(new InternalItemsQuery { Recursive = true });
-
-        var booksWithoutAbsId = allItems
-            .OfType<Book>()
-            .Where(b => !b.TryGetProviderId("Audiobookshelf", out _))
-            .Cast<BaseItem>()
-            .Concat(allItems.OfType<Audio>().Where(a => !a.TryGetProviderId("Audiobookshelf", out _)))
-            .ToList();
+        List<BaseItem> booksWithoutAbsId;
+        try
+        {
+            booksWithoutAbsId = _libraryManager.GetItemList(new InternalItemsQuery
+                {
+                    Recursive = true,
+                    MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
+                })
+                .Where(item => !item.TryGetProviderId("Audiobookshelf", out _))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ABS link retry failed while querying items — {Reason}", ex.Message);
+            await report.WriteLineAsync($"ERROR: Failed to query items — {ex.Message}").ConfigureAwait(false);
+            await report.FlushAsync(cancellationToken).ConfigureAwait(false);
+            progress.Report(100);
+            return;
+        }
 
         await report.WriteLineAsync($"Items without Audiobookshelf ID: {booksWithoutAbsId.Count}").ConfigureAwait(false);
         await report.WriteLineAsync().ConfigureAwait(false);
@@ -182,11 +196,38 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
             item.TryGetProviderId("Asin", out string? asin);
             item.TryGetProviderId("Isbn", out string? isbn);
 
+            var title = item.Name ?? string.Empty;
+            string? author = null;
+
+            var enrichedMetadata = _metadataReader.ReadMetadata(item);
+            if (enrichedMetadata is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(enrichedMetadata.Asin) && string.IsNullOrWhiteSpace(asin))
+                {
+                    asin = enrichedMetadata.Asin;
+                }
+
+                if (!string.IsNullOrWhiteSpace(enrichedMetadata.Isbn) && string.IsNullOrWhiteSpace(isbn))
+                {
+                    isbn = enrichedMetadata.Isbn;
+                }
+
+                if (!string.IsNullOrWhiteSpace(enrichedMetadata.Author))
+                {
+                    author = enrichedMetadata.Author;
+                }
+
+                if (!string.IsNullOrWhiteSpace(enrichedMetadata.Title) && enrichedMetadata.Title != item.Name)
+                {
+                    title = enrichedMetadata.Title;
+                }
+            }
+
             var match = ItemMatcher.FindBestMatch(
                 asin,
                 isbn,
-                item.Name ?? string.Empty,
-                null,
+                title,
+                author,
                 allAbsItems,
                 config.TitleMatchConfidenceThreshold);
 

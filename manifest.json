@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Add JellyfinMetadataReader: reads metadata.json from audiobook folder for fallback metadata (ASIN, ISBN, Author); add path-based author extraction when metadata.json not available; enriched matching uses folder metadata when Jellyfin lacks provider IDs.",
+        "checksum": "14c15e96b08b853375733c6f60e7d841",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.4/Jellyfin.Plugin.Audiobookshelf_1.1.5.4.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-17T03:00:00Z",
+        "version": "1.1.5.4"
+      },
+      {
         "changelog": "Fix library selection: show Jellyfin book/audio libraries instead of ABS libraries; fix config save error (libIds.split); show library selection on config page load; support both book and audio library types.",
         "checksum": "a79d526e4314e5f7392b70c0674eabac",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.3/Jellyfin.Plugin.Audiobookshelf_1.1.5.3.zip",
