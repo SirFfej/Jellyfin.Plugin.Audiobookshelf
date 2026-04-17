@@ -122,14 +122,20 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
         var config = Plugin.Instance!.Configuration;
 
         var includedLibraryIds = config.IncludedLibraryIds;
+        _logger.LogInformation("ABS link retry: config IncludedLibraryIds = {Ids}", string.Join(", ", includedLibraryIds));
+
         var selectedGuids = includedLibraryIds
             .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
             .Where(g => g != Guid.Empty)
             .ToList();
 
+        _logger.LogInformation("ABS link retry: parsed selectedGuids = {Guids}", string.Join(", ", selectedGuids.Select(g => g.ToString())));
+
         var matchingLibraries = _libraryManager.GetVirtualFolders()
             .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
             .ToList();
+
+        _logger.LogInformation("ABS link retry: matchingLibraries count = {Count}", matchingLibraries.Count);
 
         await report.WriteLineAsync($"Selected libraries ({matchingLibraries.Count}):").ConfigureAwait(false);
         if (matchingLibraries.Count == 0 && includedLibraryIds.Count > 0)
@@ -159,14 +165,38 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
         if (selectedGuids.Count > 0)
         {
             query.TopParentIds = selectedGuids.ToArray();
+            _logger.LogInformation("ABS link retry: query.TopParentIds set to {Ids}", string.Join(", ", selectedGuids.Select(g => g.ToString())));
         }
 
-        List<BaseItem> booksWithoutAbsId;
+        List<BaseItem> allItemsInScope;
         try
         {
-            booksWithoutAbsId = _libraryManager.GetItemList(query)
-                .Where(item => !item.TryGetProviderId("Audiobookshelf", out _))
-                .ToList();
+            allItemsInScope = _libraryManager.GetItemList(query).ToList();
+            _logger.LogDebug("ABS link retry: query with TopParentIds returned {Count} items", allItemsInScope.Count);
+
+            if (allItemsInScope.Count == 0 && selectedGuids.Count > 0)
+            {
+                var queryNoFilter = new InternalItemsQuery
+                {
+                    Recursive = true,
+                    MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
+                };
+                var allItems = _libraryManager.GetItemList(queryNoFilter).ToList();
+                _logger.LogDebug("ABS link retry: query without TopParentIds returned {Count} items", allItems.Count);
+
+                allItemsInScope = allItems.Where(item =>
+                    item.GetParent()?.GetParent() != null &&
+                    selectedGuids.Contains(item.GetParent()!.GetParent()!.Id)).ToList();
+                _logger.LogDebug("ABS link retry: filtered by parent hierarchy to {Count} items", allItemsInScope.Count);
+            }
+            _logger.LogInformation("ABS link retry: query returned {Count} items", allItemsInScope.Count);
+            await report.WriteLineAsync($"Query returned {allItemsInScope.Count} items in scope").ConfigureAwait(false);
+            foreach (var item in allItemsInScope.Take(10))
+            {
+                item.TryGetProviderId("Audiobookshelf", out string? absId);
+                item.TryGetProviderId("Asin", out string? asin);
+                await report.WriteLineAsync($"  - \"{item.Name}\" [{item.GetType().Name}] ABS:{absId ?? "(none)"} ASIN:{asin ?? "(none)"}").ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -177,7 +207,12 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
             return;
         }
 
+        List<BaseItem> booksWithoutAbsId = allItemsInScope
+            .Where(item => !item.TryGetProviderId("Audiobookshelf", out _))
+            .ToList();
+
         await report.WriteLineAsync($"Items without Audiobookshelf ID: {booksWithoutAbsId.Count}").ConfigureAwait(false);
+        await report.WriteLineAsync($"(from {allItemsInScope.Count} total items in selected libraries)").ConfigureAwait(false);
         await report.WriteLineAsync("  (showing first 20):").ConfigureAwait(false);
         foreach (var item in booksWithoutAbsId.Take(20))
         {
