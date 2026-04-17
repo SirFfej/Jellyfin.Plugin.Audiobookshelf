@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Add debug logging to Link Unmatched Items task: logs raw query result count and item details (type, provider IDs) before filtering to help diagnose why items aren't being found.",
+        "checksum": "c16590ac47952c5925951225aaaf50de17213a3cd2f2a63319045eeac9a5a26d",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.9/Jellyfin.Plugin.Audiobookshelf_1.1.5.9.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-17T05:30:00Z",
+        "version": "1.1.5.9"
+      },
+      {
         "changelog": "Add enhanced debugging to all tasks: Link Unmatched Items, Cleanup Invalid Links, Repair Broken Links, Refresh Metadata, Chapter Sync, Inbound Sync, and Outbound Sync now log selected libraries. Link Unmatched Items also logs search criteria for unmatched items.",
         "checksum": "65e09411a72e4bb7fbeaff82d38923d4",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.8/Jellyfin.Plugin.Audiobookshelf_1.1.5.8.zip",
@@ -135,134 +143,6 @@
         "targetAbi": "10.11.3.0",
         "timestamp": "2026-04-11T00:00:00Z",
         "version": "1.1.4.0"
-      },
-      {
-        "changelog": "Fix metadata matching for books where ABS appends series/subtitle info to titles (containment check + annotation stripping); add IHasOrder(-1) so provider runs before Jellyfin defaults; set ResultLanguage; populate Overview in search results; simplify config page feedback to Dashboard.alert only.",
-        "checksum": "1250eb45e28bc4922aa7a8e0b2f62ba4",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.3.0/Jellyfin.Plugin.Audiobookshelf_1.1.3.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-11T00:00:00Z",
-        "version": "1.1.3.0"
-      },
-      {
-        "changelog": "Fix script placed outside data-role=page (Jellyfin SPA never executed it so buttons never wired); fix API response camelCase property reads (Success/Matches/SavedCount were undefined); fix saveUserMappings token refresh (wrong property); guard document-level listeners against stacking on SPA re-navigation.",
-        "checksum": "2fd78340c26a841bcfe50a7a2f76ac05",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.2.2/Jellyfin.Plugin.Audiobookshelf_1.1.2.2.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-10T00:00:00Z",
-        "version": "1.1.2.2"
-      },
-      {
-        "changelog": "Fix button handlers and config reload: attach click listeners immediately at script execution (not inside pageshow on document which Jellyfin SPA does not reliably fire); hook pageshow on the page element itself so fields repopulate on return visits.",
-        "checksum": "6e38864caf3e47739a9b960ae9c368f4",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.2.1/Jellyfin.Plugin.Audiobookshelf_1.1.2.1.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-10T00:00:00Z",
-        "version": "1.1.2.1"
-      },
-      {
-        "changelog": "Fix token persistence: TokenVault was injected with a detached PluginConfiguration instance (not registered in DI) so tokens were never saved. Now reads Plugin.Instance.Configuration directly. Replace all Dashboard.alert() with dual notify() (absModal + Dashboard.alert) to diagnose which feedback method works. Save config now uses ApiClient.updatePluginConfiguration + getPluginConfiguration overlay (preserves unrendered fields) + Dashboard.showLoadingMsg/processPluginConfigurationUpdateResult.",
-        "checksum": "adc1003da700bd5c12aef6f51164d746",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.2.0/Jellyfin.Plugin.Audiobookshelf_1.1.2.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-10T00:00:00Z",
-        "version": "1.1.2.0"
-      },
-      {
-        "changelog": "Bug fixes: SaveMappings now correctly persists ABS tokens (token was stripped from DTO); TokenVault calls SaveConfiguration() so tokens survive restart; debounce TryRemove race fixed to prevent duplicate progress updates; Discover Users now uses form URL instead of stale saved config URL; manual user-dropdown assignment preserves ABS token; URL/token fields trimmed consistently.",
-        "checksum": "7638b4000d2c260a55a529d2c5d15590",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.1.0/Jellyfin.Plugin.Audiobookshelf_1.1.1.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-10T00:00:00Z",
-        "version": "1.1.1.0"
-      },
-      {
-        "changelog": "Align with jellyfin-plugin-template: add .editorconfig, jellyfin.ruleset, Directory.Build.props, GitHub workflows (build/test/publish/codeql), renovate.json. Add explicit Guid override in Plugin.cs. Disable strict CA rules for existing codebase.",
-        "checksum": "7dbde566fae62352c85ce18364e52e11",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.0.0/Jellyfin.Plugin.Audiobookshelf_1.1.0.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-09T00:00:00Z",
-        "version": "1.1.0.0"
-      },
-      {
-        "changelog": "Fix configPage.html: add missing pageId variable (ReferenceError crash); remove orphaned return/brace/initPage merge artifacts; guard event listeners against stacking on return visits; fix CSS class names (abs-match-card/abs-spinner) to match JS (user-match-card/loading-spinner). Bump to v1.0.9.0.",
-        "checksum": "63abdd43e55ff7e52596cbc46ee83f91",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.9.0/Jellyfin.Plugin.Audiobookshelf_1.0.9.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-09T00:00:00Z",
-        "version": "1.0.9.0"
-      },
-      {
-        "changelog": "Fix settings persistence: use pageshow event instead of unreliable viewshow; fix popup alerts for Test Connection, User Discovery, and Save Mappings; fix XSS vulnerability in user matching UI; fix race condition in renderUserMatches; align with Audiobookshelf API (episode support, complete progress payloads, session sync).",
-        "checksum": "7024ac1dd8c7796c6992146872620194",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.8.0/Jellyfin.Plugin.Audiobookshelf_1.0.8.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-08T00:00:00Z",
-        "version": "1.0.8.0"
-      },
-      {
-        "changelog": "Fix modals: move style block and modal div inside data-role=page (Jellyfin SPA discards head/body); toggle display via inline style not CSS class so modal shows reliably; clean full config page rewrite; fix config save and page reload on return visit.",
-        "checksum": "86fb2e1e1c67c9806e26d0253efee587",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.7.0/Jellyfin.Plugin.Audiobookshelf_1.0.7.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-07T00:00:00Z",
-        "version": "1.0.7.0"
-      },
-      {
-        "changelog": "Full config page rewrite: fix modal outside page div (never rendered by Jellyfin SPA); fix direct-execution init instead of unreliable viewshow event; fix duplicate match cards in Discover Users; fix saveConfig to not depend on getPluginConfiguration; camelCase body keys for Jellyfin JSON deserializer; error modals on all API calls.",
-        "checksum": "a4e5a3f9606e5590821d030771502199",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.6.0/Jellyfin.Plugin.Audiobookshelf_1.0.6.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-07T00:00:00Z",
-        "version": "1.0.6.0"
-      },
-      {
-        "changelog": "Fix config save: use camelCase keys matching Jellyfin JSON serializer so URL and token actually persist. Add result modal for Test Connection, Discover Users, and Save Mappings. Fix empty-selection guard in Save Mappings.",
-        "checksum": "b08619a502d316b38c0e05b7bf335640",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.5.0/Jellyfin.Plugin.Audiobookshelf_1.0.5.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-07T00:00:00Z",
-        "version": "1.0.5.0"
-      },
-      {
-        "changelog": "Fix config page token persistence (UserTokenEntries vs XmlIgnore UserTokenMap); fix ChapterSyncTask crash when URL/token not yet configured; safe plugin ID and token helpers throughout.",
-        "checksum": "5ad1ffcdea4f4481ede527596f13a1ec",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.4.0/Jellyfin.Plugin.Audiobookshelf_1.0.4.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-06T00:00:00Z",
-        "version": "1.0.4.0"
-      },
-      {
-        "changelog": "Fix assembly version mismatch: compile against Jellyfin.Controller 10.11.3 (matching server) instead of 10.11.8; forward-compatible with any 10.11.x server via .NET roll-forward.",
-        "checksum": "34b8eaa5d39bebc12673fe6745e0a3ca",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.3.0/Jellyfin.Plugin.Audiobookshelf_1.0.3.0.zip",
-        "targetAbi": "10.11.3.0",
-        "timestamp": "2026-04-06T00:00:00Z",
-        "version": "1.0.3.0"
-      },
-      {
-        "changelog": "Jellyfin 10.11.x compatibility: replace IChapterManager (Video-only) with IChapterRepository; fix Jellyfin.Data.Entities removal; fix TaskTriggerInfoType enum; add [Authorize] to controller; config page viewshow/GUID/accessToken fixes.",
-        "checksum": "fdaa2a7d6f210cd1ed89f88e2abf4e12",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.2.0/Jellyfin.Plugin.Audiobookshelf_1.0.2.0.zip",
-        "targetAbi": "10.11.0.0",
-        "timestamp": "2026-04-06T00:00:00Z",
-        "version": "1.0.2.0"
-      },
-      {
-        "changelog": "Bug fixes: config page checkboxes now interactive; Authorization header added to all API calls; camelCase JSON property names corrected; browser no longer treats server URL + token as a login form; XML serialization crash fixed (Dictionary replaced with serializable List).",
-        "checksum": "93c14437875e0a20347e96d9f0553e28",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.1.0/Jellyfin.Plugin.Audiobookshelf_1.0.1.0.zip",
-        "targetAbi": "10.10.0.0",
-        "timestamp": "2026-04-06T00:00:00Z",
-        "version": "1.0.1.0"
-      },
-      {
-        "changelog": "Initial alpha release. Metadata provider, bidirectional progress sync, chapter sync, and user mapping.",
-        "checksum": "e8be8c4c7c6418b61d846360a4c60749",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.0.0.0/Jellyfin.Plugin.Audiobookshelf_1.0.0.0.zip",
-        "targetAbi": "10.10.0.0",
-        "timestamp": "2026-04-02T00:00:00Z",
-        "version": "1.0.0.0"
       }
     ]
   }
