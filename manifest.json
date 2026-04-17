@@ -10,7 +10,7 @@
     "versions": [
       {
         "changelog": "Add new scheduled task: Cleanup Invalid Links. Removes Audiobookshelf provider IDs from items that are not in selected libraries. Run manually when library selection changes.",
-        "checksum": "c95c458b423d319eb51a4646374d1c06",
+        "checksum": "820e5cb05c46ec1ba2e0759f3ed64735",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.6/Jellyfin.Plugin.Audiobookshelf_1.1.5.6.zip",
         "targetAbi": "10.11.8.0",
         "timestamp": "2026-04-17T03:30:00Z",
