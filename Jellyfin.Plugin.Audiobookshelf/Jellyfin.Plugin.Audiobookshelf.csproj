@@ -4,9 +4,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <AssemblyName>Jellyfin.Plugin.Audiobookshelf</AssemblyName>
     <RootNamespace>Jellyfin.Plugin.Audiobookshelf</RootNamespace>
-    <Version>1.1.5.7</Version>
-    <AssemblyVersion>1.1.5.7</AssemblyVersion>
-    <FileVersion>1.1.5.7</FileVersion>
+    <Version>1.1.5.8</Version>
+    <AssemblyVersion>1.1.5.8</AssemblyVersion>
+    <FileVersion>1.1.5.8</FileVersion>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>

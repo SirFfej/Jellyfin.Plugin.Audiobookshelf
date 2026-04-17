@@ -122,23 +122,43 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
         var config = Plugin.Instance!.Configuration;
 
         var includedLibraryIds = config.IncludedLibraryIds;
+        var selectedGuids = includedLibraryIds
+            .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
+
+        var matchingLibraries = _libraryManager.GetVirtualFolders()
+            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .ToList();
+
+        await report.WriteLineAsync($"Selected libraries ({matchingLibraries.Count}):").ConfigureAwait(false);
+        if (matchingLibraries.Count == 0 && includedLibraryIds.Count > 0)
+        {
+            await report.WriteLineAsync("  WARNING: No libraries found matching config IDs").ConfigureAwait(false);
+            await report.WriteLineAsync("  Available libraries:").ConfigureAwait(false);
+            foreach (var lf in _libraryManager.GetVirtualFolders())
+            {
+                await report.WriteLineAsync($"    - {lf.Name} ({lf.ItemId}) [{lf.CollectionType}]").ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            foreach (var lf in matchingLibraries)
+            {
+                await report.WriteLineAsync($"  - {lf.Name} ({lf.ItemId}) [{lf.CollectionType}]").ConfigureAwait(false);
+            }
+        }
+        await report.WriteLineAsync().ConfigureAwait(false);
+
         var query = new InternalItemsQuery
         {
             Recursive = true,
             MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
         };
 
-        if (includedLibraryIds.Count > 0)
+        if (selectedGuids.Count > 0)
         {
-            var topParentGuids = includedLibraryIds
-                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
-                .Where(g => g != Guid.Empty)
-                .ToArray();
-
-            if (topParentGuids.Length > 0)
-            {
-                query.TopParentIds = topParentGuids;
-            }
+            query.TopParentIds = selectedGuids.ToArray();
         }
 
         List<BaseItem> booksWithoutAbsId;
@@ -158,6 +178,15 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
         }
 
         await report.WriteLineAsync($"Items without Audiobookshelf ID: {booksWithoutAbsId.Count}").ConfigureAwait(false);
+        await report.WriteLineAsync("  (showing first 20):").ConfigureAwait(false);
+        foreach (var item in booksWithoutAbsId.Take(20))
+        {
+            await report.WriteLineAsync($"    - \"{item.Name}\"  [{item.Id}]").ConfigureAwait(false);
+        }
+        if (booksWithoutAbsId.Count > 20)
+        {
+            await report.WriteLineAsync($"    ... and {booksWithoutAbsId.Count - 20} more").ConfigureAwait(false);
+        }
         await report.WriteLineAsync().ConfigureAwait(false);
 
         if (booksWithoutAbsId.Count == 0)
@@ -249,7 +278,8 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
 
             if (match is null)
             {
-                await report.WriteLineAsync($"  NO MATCH : \"{item.Name}\"").ConfigureAwait(false);
+                var searchInfo = $"Title: \"{title}\", Author: \"{author ?? "(none)"}\", ASIN: \"{asin ?? "(none)"}\", ISBN: \"{isbn ?? "(none)"}\"";
+                await report.WriteLineAsync($"  NO MATCH : \"{item.Name}\"  [{searchInfo}]").ConfigureAwait(false);
                 unmatched++;
             }
             else

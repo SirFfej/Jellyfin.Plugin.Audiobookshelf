@@ -94,6 +94,25 @@ public sealed partial class MetadataRefreshTask : IScheduledTask
         var config = Plugin.Instance!.Configuration;
         var includedLibraryIds = config.IncludedLibraryIds;
 
+        var selectedGuids = includedLibraryIds
+            .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
+
+        var matchingLibraries = _libraryManager.GetVirtualFolders()
+            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .ToList();
+
+        _logger.LogDebug("Metadata refresh: selected libraries ({Count}): {Libraries}",
+            matchingLibraries.Count,
+            string.Join(", ", matchingLibraries.Select(lf => $"{lf.Name} ({lf.ItemId})")));
+
+        if (matchingLibraries.Count == 0 && includedLibraryIds.Count > 0)
+        {
+            _logger.LogWarning("Metadata refresh: no libraries found matching config IDs. Available: {Libraries}",
+                string.Join(", ", _libraryManager.GetVirtualFolders().Select(lf => $"{lf.Name} ({lf.ItemId})")));
+        }
+
         var query = new InternalItemsQuery
         {
             HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
@@ -101,17 +120,9 @@ public sealed partial class MetadataRefreshTask : IScheduledTask
             MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
         };
 
-        if (includedLibraryIds.Count > 0)
+        if (selectedGuids.Count > 0)
         {
-            var topParentGuids = includedLibraryIds
-                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
-                .Where(g => g != Guid.Empty)
-                .ToArray();
-
-            if (topParentGuids.Length > 0)
-            {
-                query.TopParentIds = topParentGuids;
-            }
+            query.TopParentIds = selectedGuids.ToArray();
         }
 
         var items = _libraryManager.GetItemList(query);

@@ -112,23 +112,43 @@ public partial class AbsLinkCleanupTask : IScheduledTask
         var config = Plugin.Instance!.Configuration;
         var includedLibraryIds = config.IncludedLibraryIds;
 
+        var selectedGuids = includedLibraryIds
+            .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
+
+        var matchingLibraries = _libraryManager.GetVirtualFolders()
+            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .ToList();
+
+        await report.WriteLineAsync($"Selected libraries ({matchingLibraries.Count}):").ConfigureAwait(false);
+        if (matchingLibraries.Count == 0 && includedLibraryIds.Count > 0)
+        {
+            await report.WriteLineAsync("  WARNING: No libraries found matching config IDs").ConfigureAwait(false);
+            await report.WriteLineAsync("  Available libraries:").ConfigureAwait(false);
+            foreach (var lf in _libraryManager.GetVirtualFolders())
+            {
+                await report.WriteLineAsync($"    - {lf.Name} ({lf.ItemId}) [{lf.CollectionType}]").ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            foreach (var lf in matchingLibraries)
+            {
+                await report.WriteLineAsync($"  - {lf.Name} ({lf.ItemId}) [{lf.CollectionType}]").ConfigureAwait(false);
+            }
+        }
+        await report.WriteLineAsync().ConfigureAwait(false);
+
         var linkedBooksQuery = new InternalItemsQuery
         {
             HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
             Recursive = true
         };
 
-        if (includedLibraryIds.Count > 0)
+        if (selectedGuids.Count > 0)
         {
-            var topParentGuids = includedLibraryIds
-                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
-                .Where(g => g != Guid.Empty)
-                .ToArray();
-
-            if (topParentGuids.Length > 0)
-            {
-                linkedBooksQuery.TopParentIds = topParentGuids;
-            }
+            linkedBooksQuery.TopParentIds = selectedGuids.ToArray();
         }
 
         var linkedBooks = _libraryManager.GetItemList(linkedBooksQuery)

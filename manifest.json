@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Add enhanced debugging to all tasks: Link Unmatched Items, Cleanup Invalid Links, Repair Broken Links, Refresh Metadata, Chapter Sync, Inbound Sync, and Outbound Sync now log selected libraries. Link Unmatched Items also logs search criteria for unmatched items.",
+        "checksum": "65e09411a72e4bb7fbeaff82d38923d4",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.8/Jellyfin.Plugin.Audiobookshelf_1.1.5.8.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-17T04:30:00Z",
+        "version": "1.1.5.8"
+      },
+      {
         "changelog": "Add enhanced debugging to Cleanup Invalid Links task: logs raw config IDs, parsed GUIDs, available libraries, and matching status to help diagnose why items are incorrectly cleaned up.",
         "checksum": "83dfb772e8364a4d239e78cb5aa0d7c5",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.7/Jellyfin.Plugin.Audiobookshelf_1.1.5.7.zip",
