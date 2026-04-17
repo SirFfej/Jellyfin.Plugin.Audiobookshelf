@@ -10,7 +10,7 @@
     "versions": [
       {
         "changelog": "Add scheduled task (Link Unmatched Items) that finds audiobooks without an Audiobookshelf provider ID and attempts to match them via ASIN, ISBN, or fuzzy title matching; add Audio type support alongside Book in AbsExternalId.",
-        "checksum": "71e552853a87ecef5fa3607f8ecce2a9",
+        "checksum": "50a507dad9e58d0d7433807d3503d5ac",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.0/Jellyfin.Plugin.Audiobookshelf_1.1.5.0.zip",
         "targetAbi": "10.11.8.0",
         "timestamp": "2026-04-16T00:00:00Z",
