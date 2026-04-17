@@ -10,16 +10,11 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Audiobookshelf.Sync;
 
-/// <summary>
-/// Scheduled task that removes Audiobookshelf provider IDs from items that are not in selected libraries.
-/// Use this when library selection changes to unlink items from removed libraries.
-/// </summary>
 public sealed partial class AbsCleanupInvalidLinksTask : IScheduledTask
 {
     private readonly ILibraryManager _libraryManager;
@@ -46,10 +41,7 @@ public sealed partial class AbsCleanupInvalidLinksTask : IScheduledTask
 
     public string Category => "Audiobookshelf";
 
-    public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
-    {
-        return [];
-    }
+    public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => [];
 
     public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
@@ -61,7 +53,7 @@ public sealed partial class AbsCleanupInvalidLinksTask : IScheduledTask
             return;
         }
 
-        string reportPath = Path.Combine(
+        var reportPath = Path.Combine(
             _appPaths.LogDirectoryPath,
             $"audiobookshelf-invalid-links-cleanup-{DateTime.Now:yyyyMMddHHmmss}.log");
 
@@ -73,86 +65,112 @@ public sealed partial class AbsCleanupInvalidLinksTask : IScheduledTask
         await report.WriteLineAsync().ConfigureAwait(false);
 
         var includedLibraryIds = config.IncludedLibraryIds;
-        var topParentGuids = includedLibraryIds.Count > 0
-            ? includedLibraryIds
-                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
-                .Where(g => g != Guid.Empty)
-                .ToHashSet()
-            : new HashSet<Guid>();
 
-        await report.WriteLineAsync($"Selected libraries: {(topParentGuids.Count == 0 ? "All (none selected)" : string.Join(", ", topParentGuids))}").ConfigureAwait(false);
-        await report.WriteLineAsync().ConfigureAwait(false);
-
-        if (topParentGuids.Count == 0)
+        if (includedLibraryIds.Count == 0)
         {
             await report.WriteLineAsync("No libraries selected — nothing to clean up.").ConfigureAwait(false);
             await report.FlushAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("ABS invalid links cleanup: no libraries selected, nothing to clean");
+            _logger.LogInformation("ABS invalid links cleanup: no libraries selected");
             progress.Report(100);
             return;
         }
 
-        var linkedItemsQuery = new InternalItemsQuery
+        await report.WriteLineAsync("Raw config IncludedLibraryIds:").ConfigureAwait(false);
+        foreach (var libId in includedLibraryIds)
+        {
+            await report.WriteLineAsync($"  - \"{libId}\"").ConfigureAwait(false);
+        }
+        await report.WriteLineAsync().ConfigureAwait(false);
+
+        var selectedGuids = includedLibraryIds
+            .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
+
+        await report.WriteLineAsync($"Parsed GUIDs: {selectedGuids.Count}").ConfigureAwait(false);
+        foreach (var guid in selectedGuids)
+        {
+            await report.WriteLineAsync($"  - {guid}").ConfigureAwait(false);
+        }
+        await report.WriteLineAsync().ConfigureAwait(false);
+
+        await report.WriteLineAsync("Available libraries from GetVirtualFolders:").ConfigureAwait(false);
+        foreach (var lf in _libraryManager.GetVirtualFolders())
+        {
+            await report.WriteLineAsync($"  - {lf.Name} (ItemId: {lf.ItemId}, Type: {lf.CollectionType})").ConfigureAwait(false);
+        }
+        await report.WriteLineAsync().ConfigureAwait(false);
+
+        var matchingLibraries = _libraryManager.GetVirtualFolders()
+            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .Select(lf => $"{lf.Name} ({lf.ItemId})")
+            .ToList();
+
+        await report.WriteLineAsync($"Matching libraries: {matchingLibraries.Count}").ConfigureAwait(false);
+        foreach (var name in matchingLibraries)
+        {
+            await report.WriteLineAsync($"  - {name}").ConfigureAwait(false);
+        }
+        await report.WriteLineAsync().ConfigureAwait(false);
+
+        if (matchingLibraries.Count == 0)
+        {
+            await report.WriteLineAsync("WARNING: No libraries found matching selected IDs!").ConfigureAwait(false);
+            await report.WriteLineAsync("This means ALL items with ABS IDs will be cleaned up.").ConfigureAwait(false);
+        }
+
+        var inScopeQuery = new InternalItemsQuery
+        {
+            HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
+            Recursive = true,
+            TopParentIds = selectedGuids.ToArray(),
+            MediaTypes = new[] { MediaType.Book, MediaType.Audio }
+        };
+
+        var inScopeItems = _libraryManager.GetItemList(inScopeQuery).ToList();
+        var inScopeIds = inScopeItems.Select(i => i.Id).ToHashSet();
+
+        await report.WriteLineAsync($"Items with ABS ID in selected libraries: {inScopeIds.Count}").ConfigureAwait(false);
+        if (inScopeIds.Count > 0 && inScopeIds.Count <= 20)
+        {
+            foreach (var item in inScopeItems)
+            {
+                item.TryGetProviderId("Audiobookshelf", out string? absId);
+                await report.WriteLineAsync($"  - \"{item.Name}\" [{item.Id}] ABS: {absId}").ConfigureAwait(false);
+            }
+        }
+        await report.WriteLineAsync().ConfigureAwait(false);
+
+        var allLinkedQuery = new InternalItemsQuery
         {
             HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
             Recursive = true,
             MediaTypes = new[] { MediaType.Book, MediaType.Audio }
         };
 
-        var linkedItems = _libraryManager.GetItemList(linkedItemsQuery).ToList();
+        var outOfScopeItems = _libraryManager.GetItemList(allLinkedQuery)
+            .Where(item => !inScopeIds.Contains(item.Id))
+            .ToList();
 
-        if (linkedItems.Count == 0)
-        {
-            await report.WriteLineAsync("No items with an Audiobookshelf provider ID found.").ConfigureAwait(false);
-            await report.FlushAsync(cancellationToken).ConfigureAwait(false);
-            progress.Report(100);
-            return;
-        }
-
-        await report.WriteLineAsync($"Items with ABS ID: {linkedItems.Count}").ConfigureAwait(false);
-        await report.WriteLineAsync().ConfigureAwait(false);
-
-        var cleanupList = new List<(BaseItem Item, string AbsId)>();
-        int checkedCount = 0;
-
-        await report.WriteLineAsync("--- Checking library membership ---").ConfigureAwait(false);
-
-        foreach (var item in linkedItems)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            progress.Report((double)checkedCount / linkedItems.Count * 50.0);
-
-            if (!item.TryGetProviderId("Audiobookshelf", out string? absId) || string.IsNullOrWhiteSpace(absId))
-            {
-                checkedCount++;
-                continue;
-            }
-
-            var itemLibraryId = GetTopParentId(item);
-
-            if (itemLibraryId != Guid.Empty && !topParentGuids.Contains(itemLibraryId))
-            {
-                await report.WriteLineAsync($"  OUT-OF-SCOPE : \"{item.Name}\"  [ABS: {absId}]").ConfigureAwait(false);
-                cleanupList.Add((item, absId!));
-            }
-
-            checkedCount++;
-        }
-
-        await report.WriteLineAsync().ConfigureAwait(false);
-        await report.WriteLineAsync($"Items outside selected libraries: {cleanupList.Count}").ConfigureAwait(false);
+        await report.WriteLineAsync($"Items with ABS ID outside selected libraries: {outOfScopeItems.Count}").ConfigureAwait(false);
         await report.WriteLineAsync().ConfigureAwait(false);
 
         int cleaned = 0;
+        int total = outOfScopeItems.Count;
 
-        if (cleanupList.Count > 0)
+        if (total > 0)
         {
             await report.WriteLineAsync("--- Removing invalid links ---").ConfigureAwait(false);
 
-            foreach (var (item, absId) in cleanupList)
+            foreach (var item in outOfScopeItems)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                progress.Report(50.0 + (double)cleaned / cleanupList.Count * 50.0);
+                progress.Report((double)cleaned / total * 100.0);
+
+                if (!item.TryGetProviderId("Audiobookshelf", out string? absId) || string.IsNullOrWhiteSpace(absId))
+                {
+                    continue;
+                }
 
                 item.ProviderIds.Remove("Audiobookshelf");
                 await _libraryManager.UpdateItemAsync(item, item.GetParent(), ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
@@ -165,34 +183,17 @@ public sealed partial class AbsCleanupInvalidLinksTask : IScheduledTask
         await report.WriteLineAsync().ConfigureAwait(false);
         await report.WriteLineAsync(new string('=', 60)).ConfigureAwait(false);
         await report.WriteLineAsync("Summary").ConfigureAwait(false);
-        await report.WriteLineAsync($"  Total checked  : {checkedCount}").ConfigureAwait(false);
+        await report.WriteLineAsync($"  In-scope items : {inScopeIds.Count}").ConfigureAwait(false);
         await report.WriteLineAsync($"  Cleaned up     : {cleaned}").ConfigureAwait(false);
         await report.WriteLineAsync($"  Report written : {reportPath}").ConfigureAwait(false);
         await report.WriteLineAsync(new string('=', 60)).ConfigureAwait(false);
 
         await report.FlushAsync(cancellationToken).ConfigureAwait(false);
 
-        LogCleanupComplete(_logger, cleaned, checkedCount - cleanupList.Count);
-        _logger.LogInformation("ABS invalid links cleanup report written to {ReportPath}", reportPath);
+        LogCleanupComplete(_logger, cleaned, inScopeIds.Count);
+        _logger.LogInformation("ABS invalid links cleanup complete — {Cleaned} removed, {InScope} in-scope", cleaned, inScopeIds.Count);
 
         progress.Report(100);
-    }
-
-    private static Guid GetTopParentId(BaseItem item)
-    {
-        var current = item;
-        while (current != null)
-        {
-            var parent = current.GetParent();
-            if (parent is AggregateFolder)
-            {
-                return current.Id;
-            }
-
-            current = parent;
-        }
-
-        return item.Id;
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "ABS invalid links cleanup complete — {Cleaned} removed, {InScope} in-scope")]

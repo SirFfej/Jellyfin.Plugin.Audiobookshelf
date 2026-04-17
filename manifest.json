@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Add enhanced debugging to Cleanup Invalid Links task: logs raw config IDs, parsed GUIDs, available libraries, and matching status to help diagnose why items are incorrectly cleaned up.",
+        "checksum": "83dfb772e8364a4d239e78cb5aa0d7c5",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.7/Jellyfin.Plugin.Audiobookshelf_1.1.5.7.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-17T04:00:00Z",
+        "version": "1.1.5.7"
+      },
+      {
         "changelog": "Add new scheduled task: Cleanup Invalid Links. Removes Audiobookshelf provider IDs from items that are not in selected libraries. Run manually when library selection changes.",
         "checksum": "820e5cb05c46ec1ba2e0759f3ed64735",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.5.6/Jellyfin.Plugin.Audiobookshelf_1.1.5.6.zip",
