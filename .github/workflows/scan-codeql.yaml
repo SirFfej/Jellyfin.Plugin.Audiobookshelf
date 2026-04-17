@@ -15,6 +15,9 @@ on:
 
 jobs:
   call:
+    permissions:
+      security-events: write
+      contents: read
     uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@master
     with:
       repository-name: SirFfej/Jellyfin.Plugin.Audiobookshelf
