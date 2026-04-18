@@ -179,27 +179,39 @@ public partial class InboundSyncTask : IScheduledTask
         var config = Plugin.Instance!.Configuration;
         var includedLibraryIds = config.IncludedLibraryIds;
 
-        var query = new InternalItemsQuery
-        {
-            HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
-            Recursive = true
-        };
+        var selectedGuids = includedLibraryIds
+            .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
 
-        if (includedLibraryIds.Count > 0)
-        {
-            var topParentGuids = includedLibraryIds
-                .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
-                .Where(g => g != Guid.Empty)
-                .ToArray();
+        var matchingLibraries = _libraryManager.GetVirtualFolders()
+            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .ToList();
 
-            if (topParentGuids.Length > 0)
+        var absItems = new List<BaseItem>();
+
+        foreach (var lib in matchingLibraries)
+        {
+            var folder = _libraryManager.GetVirtualFolders()
+                .FirstOrDefault(f => f.Name == lib.Name);
+
+            if (folder == null)
             {
-                query.TopParentIds = topParentGuids;
+                continue;
             }
-        }
 
-        // Find all Jellyfin items that have an ABS provider ID
-        var absItems = _libraryManager.GetItemList(query);
+            var folderId = Guid.Parse(folder.ItemId.ToString());
+
+            var libQuery = new InternalItemsQuery
+            {
+                HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
+                Recursive = true,
+                ParentId = folderId
+            };
+
+            var libItems = _libraryManager.GetItemList(libQuery);
+            absItems.AddRange(libItems);
+        }
 
         foreach (var item in absItems)
         {

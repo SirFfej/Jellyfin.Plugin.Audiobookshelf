@@ -29,19 +29,38 @@ public static class ItemMatcher
     /// <param name="authorName">Author name (used for fuzzy fallback).</param>
     /// <param name="absItems">Candidate ABS items to search.</param>
     /// <param name="confidenceThreshold">Minimum fuzzy score (0–1) to accept a title+author match.</param>
+    /// <param name="preferEbook">If true, only match ABS items with an ebook file. If false, only match items with audio files.</param>
     public static AbsLibraryItem? FindBestMatch(
         string? asin,
         string? isbn,
         string title,
         string? authorName,
         IReadOnlyList<AbsLibraryItem> absItems,
-        double confidenceThreshold = 0.85)
+        double confidenceThreshold = 0.85,
+        bool preferEbook = false)
     {
+        // Filter candidates based on ebook vs audiobook preference
+        // preferEbook=true means we want items with EbookFile
+        // preferEbook=false means we want items with AudioFiles (or no ebook)
+        var candidates = absItems.Where(i =>
+        {
+            bool hasEbook = i.Media.EbookFile is not null;
+            bool hasAudio = i.Media.AudioFiles.Length > 0;
+
+            if (preferEbook)
+            {
+                return hasEbook;
+            }
+            else
+            {
+                return !hasEbook || hasAudio;
+            }
+        }).ToList();
+
         // Priority 1: ASIN exact match
         if (!string.IsNullOrWhiteSpace(asin))
         {
-            var match = absItems.FirstOrDefault(i =>
-                !i.IsMissing &&
+            var match = candidates.FirstOrDefault(i =>
                 string.Equals(i.Media.Metadata.Asin, asin, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
@@ -52,8 +71,7 @@ public static class ItemMatcher
         // Priority 2: ISBN exact match
         if (!string.IsNullOrWhiteSpace(isbn))
         {
-            var match = absItems.FirstOrDefault(i =>
-                !i.IsMissing &&
+            var match = candidates.FirstOrDefault(i =>
                 string.Equals(i.Media.Metadata.Isbn, isbn, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
@@ -79,7 +97,7 @@ public static class ItemMatcher
 
         string normalisedQuery = NormaliseTitle(title);
 
-        foreach (var item in absItems.Where(i => !i.IsMissing))
+        foreach (var item in candidates.Where(i => !i.IsMissing))
         {
             string absRawTitle    = item.Media.Metadata.Title;
             string absNormTitle   = NormaliseTitle(absRawTitle);

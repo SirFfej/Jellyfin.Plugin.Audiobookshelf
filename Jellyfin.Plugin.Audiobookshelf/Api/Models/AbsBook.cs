@@ -41,4 +41,8 @@ public class AbsBook
     /// </summary>
     [JsonPropertyName("tracks")]
     public AbsAudioTrack[] Tracks { get; set; } = [];
+
+    /// <summary>Gets or sets the ebook file if present (for ebook-type books).</summary>
+    [JsonPropertyName("ebookFile")]
+    public AbsEbookFile? EbookFile { get; set; }
 }

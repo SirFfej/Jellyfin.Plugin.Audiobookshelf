@@ -113,19 +113,33 @@ public sealed partial class MetadataRefreshTask : IScheduledTask
                 string.Join(", ", _libraryManager.GetVirtualFolders().Select(lf => $"{lf.Name} ({lf.ItemId})")));
         }
 
-        var query = new InternalItemsQuery
-        {
-            HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
-            Recursive = true,
-            MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
-        };
+        var items = new List<BaseItem>();
 
-        if (selectedGuids.Count > 0)
+        foreach (var lib in matchingLibraries)
         {
-            query.TopParentIds = selectedGuids.ToArray();
+            var folder = _libraryManager.GetVirtualFolders()
+                .FirstOrDefault(f => f.Name == lib.Name);
+
+            if (folder == null)
+            {
+                _logger.LogWarning("Metadata refresh: could not find folder for library {Name}", lib.Name);
+                continue;
+            }
+
+            var folderId = Guid.Parse(folder.ItemId.ToString());
+
+            var libQuery = new InternalItemsQuery
+            {
+                HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
+                Recursive = true,
+                ParentId = folderId,
+                MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
+            };
+
+            var libItems = _libraryManager.GetItemList(libQuery);
+            items.AddRange(libItems);
+            _logger.LogDebug("Metadata refresh: library '{Name}' (folderId: {FolderId}) returned {Count} items", lib.Name, folderId, libItems.Count);
         }
-
-        var items = _libraryManager.GetItemList(query);
 
         if (items.Count == 0)
         {

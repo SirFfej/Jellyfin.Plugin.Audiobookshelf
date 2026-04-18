@@ -140,20 +140,34 @@ public partial class AbsLinkCleanupTask : IScheduledTask
         }
         await report.WriteLineAsync().ConfigureAwait(false);
 
-        var linkedBooksQuery = new InternalItemsQuery
-        {
-            HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
-            Recursive = true
-        };
+        var linkedBooks = new List<Book>();
 
-        if (selectedGuids.Count > 0)
+        foreach (var lib in matchingLibraries)
         {
-            linkedBooksQuery.TopParentIds = selectedGuids.ToArray();
+            var folder = _libraryManager.GetVirtualFolders()
+                .FirstOrDefault(f => f.Name == lib.Name);
+
+            if (folder == null)
+            {
+                await report.WriteLineAsync($"  WARNING: Could not find folder for library {lib.Name}").ConfigureAwait(false);
+                continue;
+            }
+
+            var folderId = Guid.Parse(folder.ItemId.ToString());
+
+            var libQuery = new InternalItemsQuery
+            {
+                HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
+                Recursive = true,
+                ParentId = folderId
+            };
+
+            var libBooks = _libraryManager.GetItemList(libQuery)
+                .OfType<Book>()
+                .ToList();
+            linkedBooks.AddRange(libBooks);
+            await report.WriteLineAsync($"  Library '{lib.Name}' (folderId: {folderId}) returned {libBooks.Count} books").ConfigureAwait(false);
         }
-
-        var linkedBooks = _libraryManager.GetItemList(linkedBooksQuery)
-            .OfType<Book>()
-            .ToList();
 
         if (linkedBooks.Count == 0)
         {

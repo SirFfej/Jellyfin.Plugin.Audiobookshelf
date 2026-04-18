@@ -309,13 +309,19 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
                 }
             }
 
+            string? container = item.Container;
+            bool preferEbook = !string.IsNullOrWhiteSpace(container) &&
+                (container.EndsWith("epub", StringComparison.OrdinalIgnoreCase) ||
+                 container.EndsWith("pdf", StringComparison.OrdinalIgnoreCase));
+
             var match = ItemMatcher.FindBestMatch(
                 asin,
                 isbn,
                 title,
                 author,
                 allAbsItems,
-                config.TitleMatchConfidenceThreshold);
+                config.TitleMatchConfidenceThreshold,
+                preferEbook);
 
             if (match is null)
             {

@@ -119,15 +119,32 @@ public sealed partial class AbsCleanupInvalidLinksTask : IScheduledTask
             await report.WriteLineAsync("This means ALL items with ABS IDs will be cleaned up.").ConfigureAwait(false);
         }
 
-        var inScopeQuery = new InternalItemsQuery
-        {
-            HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
-            Recursive = true,
-            TopParentIds = selectedGuids.ToArray(),
-            MediaTypes = new[] { MediaType.Book, MediaType.Audio }
-        };
+        var inScopeItems = new List<BaseItem>();
 
-        var inScopeItems = _libraryManager.GetItemList(inScopeQuery).ToList();
+        foreach (var lib in matchingLibraries)
+        {
+            var folder = _libraryManager.GetVirtualFolders()
+                .FirstOrDefault(f => f.Name == lib);
+
+            if (folder == null)
+            {
+                continue;
+            }
+
+            var folderId = Guid.Parse(folder.ItemId.ToString());
+
+            var libQuery = new InternalItemsQuery
+            {
+                HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
+                Recursive = true,
+                ParentId = folderId,
+                MediaTypes = new[] { MediaType.Book, MediaType.Audio }
+            };
+
+            var libItems = _libraryManager.GetItemList(libQuery);
+            inScopeItems.AddRange(libItems);
+        }
+
         var inScopeIds = inScopeItems.Select(i => i.Id).ToHashSet();
 
         await report.WriteLineAsync($"Items with ABS ID in selected libraries: {inScopeIds.Count}").ConfigureAwait(false);
