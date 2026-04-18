@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix Validate Link Types task: add MediaTypes filter to prevent deserialization errors.",
+        "checksum": "8cbb8afbacc842cdef97407ffc00e999",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.7.3/Jellyfin.Plugin.Audiobookshelf_1.1.7.3.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-18T15:00:00Z",
+        "version": "1.1.7.3"
+      },
+      {
         "changelog": "Add Validate Link Types task: validates and removes links where file type mismatch (audiobook to ebook).",
         "checksum": "a6c4aa940e2b3d52c66d2eff5609bec4",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.7.2/Jellyfin.Plugin.Audiobookshelf_1.1.7.2.zip",
