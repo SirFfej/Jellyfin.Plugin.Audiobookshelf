@@ -9,12 +9,12 @@
     "owner": "SirFfej",
     "versions": [
       {
-        "changelog": "Change debug logging from LogDebug to LogInformation so messages appear in Jellyfin logs.",
-        "checksum": "c3346b754a5107221957601272d46907",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.6.2/Jellyfin.Plugin.Audiobookshelf_1.1.6.2.zip",
+        "changelog": "Remove MediaTypes filter to query all items, rely on TopParentIds for scope.",
+        "checksum": "3480019b8d50359ca6b2b6ae068f1725",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.6.3/Jellyfin.Plugin.Audiobookshelf_1.1.6.3.zip",
         "targetAbi": "10.11.8.0",
-        "timestamp": "2026-04-17T07:30:00Z",
-        "version": "1.1.6.2"
+        "timestamp": "2026-04-18T13:00:00Z",
+        "version": "1.1.6.3"
       },
       {
         "changelog": "Add debug logging to trace library ID selection and query filtering.",

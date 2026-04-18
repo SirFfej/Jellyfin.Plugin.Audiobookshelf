@@ -158,8 +158,7 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
 
         var query = new InternalItemsQuery
         {
-            Recursive = true,
-            MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
+            Recursive = true
         };
 
         if (selectedGuids.Count > 0)
@@ -172,23 +171,6 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
         try
         {
             allItemsInScope = _libraryManager.GetItemList(query).ToList();
-            _logger.LogDebug("ABS link retry: query with TopParentIds returned {Count} items", allItemsInScope.Count);
-
-            if (allItemsInScope.Count == 0 && selectedGuids.Count > 0)
-            {
-                var queryNoFilter = new InternalItemsQuery
-                {
-                    Recursive = true,
-                    MediaTypes = new[] { Jellyfin.Data.Enums.MediaType.Book, Jellyfin.Data.Enums.MediaType.Audio }
-                };
-                var allItems = _libraryManager.GetItemList(queryNoFilter).ToList();
-                _logger.LogDebug("ABS link retry: query without TopParentIds returned {Count} items", allItems.Count);
-
-                allItemsInScope = allItems.Where(item =>
-                    item.GetParent()?.GetParent() != null &&
-                    selectedGuids.Contains(item.GetParent()!.GetParent()!.Id)).ToList();
-                _logger.LogDebug("ABS link retry: filtered by parent hierarchy to {Count} items", allItemsInScope.Count);
-            }
             _logger.LogInformation("ABS link retry: query returned {Count} items", allItemsInScope.Count);
             await report.WriteLineAsync($"Query returned {allItemsInScope.Count} items in scope").ConfigureAwait(false);
             foreach (var item in allItemsInScope.Take(10))
