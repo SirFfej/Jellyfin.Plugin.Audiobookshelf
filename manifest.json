@@ -9,6 +9,14 @@
     "owner": "SirFfej",
     "versions": [
       {
+        "changelog": "Fix Validate Link Types task: remove MediaTypes filter to find linked items.",
+        "checksum": "b31f8ec9c1089901b4c6a4fe1b6c61cb",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.7.4/Jellyfin.Plugin.Audiobookshelf_1.1.7.4.zip",
+        "targetAbi": "10.11.8.0",
+        "timestamp": "2026-04-18T15:15:00Z",
+        "version": "1.1.7.4"
+      },
+      {
         "changelog": "Fix Validate Link Types task: add MediaTypes filter to prevent deserialization errors.",
         "checksum": "8cbb8afbacc842cdef97407ffc00e999",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.7.3/Jellyfin.Plugin.Audiobookshelf_1.1.7.3.zip",

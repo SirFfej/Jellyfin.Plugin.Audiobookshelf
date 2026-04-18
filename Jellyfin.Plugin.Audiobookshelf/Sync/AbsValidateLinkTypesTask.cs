@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Entities;
@@ -100,19 +101,16 @@ public sealed partial class AbsValidateLinkTypesTask : IScheduledTask
 
             var libQuery = new InternalItemsQuery
             {
-                Recursive = true
+                HasAnyProviderId = new Dictionary<string, string> { ["Audiobookshelf"] = string.Empty },
+                Recursive = true,
+                ParentId = folderId
             };
 
-            var libFolders = _libraryManager.GetItemList(libQuery)
-                .Where(i => i.ParentId == folderId)
+            var libItems = _libraryManager.GetItemList(libQuery)
                 .ToList();
 
-            var linked = libFolders
-                .Where(i => i.ProviderIds.ContainsKey("Audiobookshelf"))
-                .ToList();
-
-            linkedItems.AddRange(linked);
-            await report.WriteLineAsync($"Library '{lib.Name}': {linked.Count} linked items").ConfigureAwait(false);
+            linkedItems.AddRange(libItems);
+            await report.WriteLineAsync($"Library '{lib.Name}': {libItems.Count} linked items").ConfigureAwait(false);
         }
 
         await report.WriteLineAsync().ConfigureAwait(false);
