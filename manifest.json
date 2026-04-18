@@ -10,7 +10,7 @@
     "versions": [
       {
         "changelog": "Query each library by ParentId directly and add extra debug logging.",
-        "checksum": "1f903ef7f7af0aa918673f1daab668ed",
+        "checksum": "d7e56fe5a34ab9b232da58367a871faa",
         "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.6.4/Jellyfin.Plugin.Audiobookshelf_1.1.6.4.zip",
         "targetAbi": "10.11.8.0",
         "timestamp": "2026-04-18T13:30:00Z",
