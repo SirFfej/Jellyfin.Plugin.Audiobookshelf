@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using Jellyfin.Plugin.Audiobookshelf.Api.Models;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -110,4 +112,61 @@ public class AbsApiClientFactory
     /// Clears all cached client instances (e.g. after a configuration change).
     /// </summary>
     public void InvalidateAll() => _clients.Clear();
+
+    /// <summary>
+    /// Gets cached ABS libraries with items for the admin client.
+    /// Uses a 10-minute cache to avoid reloading on each task run.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of ABS library items.</returns>
+    public async Task<List<AbsLibraryItem>> GetCachedLibraryItemsAsync(CancellationToken ct = default)
+    {
+        const string CacheKey = "abs:library-items:all";
+        const int CacheMinutes = 10;
+
+        if (!_memoryCache.TryGetValue(CacheKey, out List<AbsLibraryItem>? cachedItems))
+        {
+            var client = GetAdminClient();
+            _clientLogger.LogInformation("ABS library cache MISS — loading from server...");
+
+            var libraries = await client.GetLibrariesAsync(ct).ConfigureAwait(false);
+            cachedItems = new List<AbsLibraryItem>();
+
+            foreach (var lib in libraries)
+            {
+                if (!string.Equals(lib.MediaType, "book", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                int page = 0;
+                while (true)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var pageResponse = await client.GetLibraryItemsAsync(lib.Id, page, 100, ct).ConfigureAwait(false);
+                    cachedItems.AddRange(pageResponse.Results);
+                    if (pageResponse.Results.Length < 100)
+                    {
+                        break;
+                    }
+
+                    page++;
+                }
+            }
+
+            _clientLogger.LogInformation("ABS library cache POPULATED — {Count} items cached for {Minutes} minutes",
+                cachedItems.Count, CacheMinutes);
+
+            var cacheOptions = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(CacheMinutes));
+
+            _memoryCache.Set(CacheKey, cachedItems, cacheOptions);
+        }
+        else
+        {
+            _clientLogger.LogDebug("ABS library cache HIT — {Count} items from cache", cachedItems?.Count ?? 0);
+        }
+
+        return cachedItems ?? [];
+    }
 }

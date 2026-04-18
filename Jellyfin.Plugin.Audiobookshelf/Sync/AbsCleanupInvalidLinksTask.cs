@@ -31,7 +31,7 @@ public sealed partial class AbsCleanupInvalidLinksTask : IScheduledTask
         _logger = logger;
     }
 
-    public string Name => "Audiobookshelf: Cleanup Invalid Links";
+    public string Name => "Audiobookshelf: Cleanup - Remove Invalid Links";
 
     public string Key => "AbsCleanupInvalidLinks";
 

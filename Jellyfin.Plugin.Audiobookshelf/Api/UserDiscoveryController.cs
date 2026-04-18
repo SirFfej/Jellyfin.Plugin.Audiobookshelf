@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Audiobookshelf.Services;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -23,6 +26,7 @@ public class UserDiscoveryController : ControllerBase
     private readonly UserMappingService _mappingService;
     private readonly TokenVault _tokenVault;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILibraryManager _libraryManager;
     private readonly ILogger<UserDiscoveryController> _logger;
 
     /// <summary>
@@ -31,16 +35,19 @@ public class UserDiscoveryController : ControllerBase
     /// <param name="mappingService">User mapping service.</param>
     /// <param name="tokenVault">Token vault for secure storage.</param>
     /// <param name="httpClientFactory">HTTP client factory for proxied requests.</param>
+    /// <param name="libraryManager">Library manager for Jellyfin libraries.</param>
     /// <param name="logger">Logger instance.</param>
     public UserDiscoveryController(
         UserMappingService mappingService,
         TokenVault tokenVault,
         IHttpClientFactory httpClientFactory,
+        ILibraryManager libraryManager,
         ILogger<UserDiscoveryController> logger)
     {
         _mappingService = mappingService;
         _tokenVault = tokenVault;
         _httpClientFactory = httpClientFactory;
+        _libraryManager = libraryManager;
         _logger = logger;
     }
 
@@ -140,6 +147,76 @@ public class UserDiscoveryController : ControllerBase
         var saved = await _mappingService.SaveMappingsAsync(matches);
 
         return Ok(new SaveMappingsResponse { SavedCount = saved });
+    }
+
+    /// <summary>
+    /// Gets the Jellyfin libraries that can be linked to Audiobookshelf.
+    /// Returns book and music libraries with their media type.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of Jellyfin libraries.</returns>
+    [HttpGet("Libraries")]
+    public ActionResult<GetLibrariesResponse> GetLibraries(CancellationToken ct = default)
+    {
+        try
+        {
+            var libraries = _libraryManager.GetVirtualFolders()
+                .Where(lf => lf.CollectionType == CollectionTypeOptions.books)
+                .Select(lf => new LibraryDto
+                {
+                    Id = lf.ItemId.ToString(),
+                    Name = lf.Name ?? string.Empty,
+                    MediaType = "book"
+                })
+                .Concat(_libraryManager.GetVirtualFolders()
+                    .Where(lf => lf.CollectionType == CollectionTypeOptions.music)
+                    .Select(lf => new LibraryDto
+                    {
+                        Id = lf.ItemId.ToString(),
+                        Name = lf.Name ?? string.Empty,
+                        MediaType = "audio"
+                    }))
+                .ToList();
+
+            return Ok(new GetLibrariesResponse { Success = true, Libraries = libraries });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get Jellyfin libraries");
+            return Ok(new GetLibrariesResponse { Success = false, Error = "Failed to fetch libraries" });
+        }
+    }
+
+    /// <summary>
+    /// Gets all Jellyfin library IDs that match a given media type.
+    /// Used by sync tasks to filter by selected library.
+    /// </summary>
+    /// <param name="mediaType">The media type filter ("book" or "audio").</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of library IDs.</returns>
+    [HttpGet("LibraryIds")]
+    public ActionResult<GetLibraryIdsResponse> GetLibraryIds(
+        [FromQuery] string mediaType,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var collectionType = string.Equals(mediaType, "audio", StringComparison.OrdinalIgnoreCase)
+                ? CollectionTypeOptions.music
+                : CollectionTypeOptions.books;
+
+            var ids = _libraryManager.GetVirtualFolders()
+                .Where(lf => lf.CollectionType == collectionType)
+                .Select(lf => lf.ItemId.ToString())
+                .ToList();
+
+            return Ok(new GetLibraryIdsResponse { LibraryIds = ids });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get library IDs for media type {MediaType}", mediaType);
+            return Ok(new GetLibraryIdsResponse { LibraryIds = new List<string>() });
+        }
     }
 
     private List<UserMatchDto> ConvertToDto(List<UserMatch> matches)
@@ -310,5 +387,58 @@ public class SaveMappingsResponse
     /// Gets or sets the number of mappings saved.
     /// </summary>
     public int SavedCount { get; set; }
+}
+
+/// <summary>
+/// Response containing available Audiobookshelf libraries.
+/// </summary>
+public class GetLibrariesResponse
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether the request succeeded.
+    /// </summary>
+    public bool Success { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of available libraries.
+    /// </summary>
+    public List<LibraryDto> Libraries { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets an error message on failure.
+    /// </summary>
+    public string? Error { get; set; }
+}
+
+/// <summary>
+/// DTO for an Audiobookshelf library.
+/// </summary>
+public class LibraryDto
+{
+    /// <summary>
+    /// Gets or sets the library ID.
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the library name.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the media type (e.g., "book", "podcast").
+    /// </summary>
+    public string MediaType { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Response containing library IDs for a media type.
+/// </summary>
+public class GetLibraryIdsResponse
+{
+    /// <summary>
+    /// Gets or sets the list of library IDs.
+    /// </summary>
+    public List<string> LibraryIds { get; set; } = new();
 }
 

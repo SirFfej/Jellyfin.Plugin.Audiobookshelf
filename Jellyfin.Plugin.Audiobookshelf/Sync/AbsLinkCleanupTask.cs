@@ -58,9 +58,8 @@ public partial class AbsLinkCleanupTask : IScheduledTask
     }
 
     /// <inheritdoc />
-    public string Name => "Audiobookshelf: Repair Broken Links";
+public string Name => "Audiobookshelf: Cleanup - Repair Broken Links";
 
-    /// <inheritdoc />
     public string Key => "AbsLinkCleanup";
 
     /// <inheritdoc />
@@ -252,30 +251,7 @@ public partial class AbsLinkCleanupTask : IScheduledTask
         // ── Step 3: load full ABS library for re-matching ─────────────────────
         await report.WriteLineAsync("--- Loading ABS library for re-matching ---").ConfigureAwait(false);
 
-        var libraries = await adminClient.GetLibrariesAsync(cancellationToken).ConfigureAwait(false);
-        var allAbsItems = new List<Api.Models.AbsLibraryItem>();
-
-        foreach (var lib in libraries)
-        {
-            if (!string.Equals(lib.MediaType, "book", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            int page = 0;
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var pageResponse = await adminClient.GetLibraryItemsAsync(lib.Id, page, 100, cancellationToken).ConfigureAwait(false);
-                allAbsItems.AddRange(pageResponse.Results);
-                if (pageResponse.Results.Length < 100)
-                {
-                    break;
-                }
-
-                page++;
-            }
-        }
+        var allAbsItems = await _clientFactory.GetCachedLibraryItemsAsync(cancellationToken).ConfigureAwait(false);
 
         await report.WriteLineAsync($"ABS library items loaded: {allAbsItems.Count}").ConfigureAwait(false);
         await report.WriteLineAsync().ConfigureAwait(false);

@@ -82,17 +82,17 @@
 
                 <!-- Libraries -->
                 <div class="verticalSection">
-                    <h3 class="sectionTitle">Libraries</h3>
-                    <p class="fieldDescription">Leave blank to expose all ABS libraries. Enter comma-separated library IDs to restrict.</p>
+                    <h3 class="sectionTitle">Jellyfin Libraries</h3>
+                    <p class="fieldDescription">Select which Jellyfin book libraries to link with Audiobookshelf. Leave all unchecked to link all.</p>
                 </div>
-                <div class="inputContainer">
-                    <label class="inputLabel inputLabelUnfocused" for="absLibraryIds">Included Library IDs (optional)</label>
-                    <input id="absLibraryIds" type="text" class="emby-input" placeholder="lib_abc123, lib_def456" />
+                <div id="absLibraryList" style="margin-bottom: 16px;">
+                    <p style="color: var(--text-secondary, #888);">Loading libraries...</p>
                 </div>
 
                 <!-- Progress Sync -->
                 <div class="verticalSection">
                     <h3 class="sectionTitle">Progress Sync</h3>
+                    <p class="fieldDescription">Configure how progress syncs between Jellyfin and Audiobookshelf.</p>
                 </div>
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
@@ -109,6 +109,7 @@
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="absSyncInterval">Sync interval (minutes)</label>
                     <input id="absSyncInterval" type="number" class="emby-input" min="1" max="1440" value="10" />
+                    <div class="fieldDescription">How often to pull progress from ABS. Push happens in real-time.</div>
                 </div>
 
                 <!-- Metadata Provider -->
@@ -127,6 +128,11 @@
                         <input type="checkbox" id="absEnablePodcasts" is="emby-checkbox" />
                         <span>Include podcast libraries when auto-discovering (experimental)</span>
                     </label>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="absTitleConfidence">Title match confidence</label>
+                    <input id="absTitleConfidence" type="number" class="emby-input" min="0.5" max="1.0" step="0.05" value="0.85" />
+                    <div class="fieldDescription">Minimum confidence (0.5–1.0) for title+author fuzzy matching. Higher = stricter.</div>
                 </div>
 
                 <!-- User Mapping -->
@@ -173,6 +179,7 @@
     var pluginGuid = '7b2f4a1d-e3c0-4e8b-9d5a-3f7c6b2e0a14';
     var pageId = 'audiobookshelfConfigPage';
     var userMatches = [];
+    var savedLibraryIds = [];
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -198,6 +205,76 @@
         Dashboard.alert({ title: title, message: message });
     }
 
+    // ── Library selection ─────────────────────────────────────────────────────
+
+    function renderLibraryList(page, libraries, selectedIds) {
+        var container = page.querySelector('#absLibraryList');
+        if (!libraries || libraries.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-secondary, #888);">No libraries found on this server.</p>';
+            return;
+        }
+
+        var html = '<p class="fieldDescription" style="margin-bottom: 8px;">Select which libraries to sync. Leave all unchecked to sync all.</p>';
+        html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
+
+        libraries.forEach(function (lib) {
+            var isSelected = selectedIds.length === 0 || selectedIds.includes(lib.id || lib.Id);
+            var mediaType = (lib.mediaType || lib.MediaType || '').toLowerCase();
+            var typeIcon = mediaType === 'book' ? '📚' : mediaType === 'audio' ? '🎵' : mediaType === 'podcast' ? '🎙️' : '📁';
+            var typeLabel = mediaType === 'book' ? 'Book' : mediaType === 'audio' ? 'Audio' : mediaType === 'podcast' ? 'Podcast' : 'Other';
+
+            html += '<label style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border-color, #ddd); border-radius: 4px; cursor: pointer;">';
+            html += '<input type="checkbox" class="abs-library-checkbox" value="' + esc(lib.id || lib.Id) + '" data-mediatype="' + esc(mediaType) + '" ' + (isSelected ? 'checked' : '') + ' />';
+            html += '<span>' + typeIcon + ' ' + esc(lib.name || lib.Name) + '</span>';
+            html += '<span style="color: var(--text-secondary, #888); font-size: 12px;">(' + typeLabel + ')</span>';
+            html += '</label>';
+        });
+
+        html += '</div>';
+        html += '<p style="color: var(--text-secondary, #888); font-size: 12px; margin-top: 8px;">Leave all unchecked to sync all available libraries.</p>';
+
+        container.innerHTML = html;
+    }
+
+    function applyLibrarySelection(page, selectedIds) {
+        var checkboxes = page.querySelectorAll('.abs-library-checkbox');
+        if (checkboxes.length === 0) return;
+        checkboxes.forEach(function (cb) {
+            cb.checked = selectedIds.length === 0 || selectedIds.includes(cb.value);
+        });
+    }
+
+    function loadLibraries(page) {
+        var container = page.querySelector('#absLibraryList');
+        container.innerHTML = '<p style="color: var(--text-secondary, #888);"><span class="loading-spinner"></span> Loading libraries...</p>';
+
+        var savedIds = savedLibraryIds || [];
+        var checkboxes = page.querySelectorAll('.abs-library-checkbox');
+        if (checkboxes.length > 0) {
+            savedIds = [];
+            checkboxes.forEach(function (cb) {
+                if (cb.checked) savedIds.push(cb.value);
+            });
+        }
+
+        fetch(ApiClient.getUrl('Audiobookshelf/UserDiscovery/Libraries'), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': 'MediaBrowser Token="' + getJellyfinToken() + '"'
+            }
+        })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (data) {
+            var libraries = data.libraries || data.Libraries || [];
+            renderLibraryList(page, libraries, savedIds);
+        })
+        .catch(function (err) {
+            console.error('Failed to load libraries:', err);
+            container.innerHTML = '<p style="color: var(--error-color, red);">Failed to load libraries. Check connection.</p>';
+        });
+    }
+
     // ── Load config ───────────────────────────────────────────────────────────
 
     function loadConfig(page) {
@@ -206,7 +283,8 @@
             page.querySelector('#absAdminToken').value = config.AdminApiToken || config.adminApiToken || '';
 
             var libIds = config.IncludedLibraryIds || config.includedLibraryIds || [];
-            page.querySelector('#absLibraryIds').value = libIds.join(', ');
+            savedLibraryIds = libIds;
+            applyLibrarySelection(page, libIds);
 
             page.querySelector('#absSyncInterval').value =
                 config.ProgressSyncIntervalMinutes || config.progressSyncIntervalMinutes || 10;
@@ -220,6 +298,9 @@
             page.querySelector('#absEnableMetadata').checked = boolVal('EnableMetadataProvider','enableMetadataProvider',true);
             page.querySelector('#absEnablePodcasts').checked = boolVal('EnablePodcastLibraries','enablePodcastLibraries',false);
 
+            page.querySelector('#absTitleConfidence').value =
+                config.TitleMatchConfidenceThreshold || config.titleMatchConfidenceThreshold || 0.85;
+
             var tokenMap = {};
             var entries = config.UserTokenEntries || config.userTokenEntries || [];
             entries.forEach(function (e) {
@@ -228,6 +309,7 @@
                 if (id && tok) tokenMap[id] = tok;
             });
             renderUserTokenTable(page, tokenMap);
+            loadLibraries(page);
         }).catch(function (err) {
             console.error('[ABS] loadConfig failed:', err);
         });
@@ -540,12 +622,16 @@
     function saveConfig(page) {
         var url      = page.querySelector('#absServerUrl').value.trim().replace(/\/$/, '');
         var token    = page.querySelector('#absAdminToken').value.trim();
-        var libIds   = page.querySelector('#absLibraryIds').value;
         var interval = parseInt(page.querySelector('#absSyncInterval').value, 10) || 10;
         var outbound = page.querySelector('#absEnableOutbound').checked;
         var inbound  = page.querySelector('#absEnableInbound').checked;
         var metadata = page.querySelector('#absEnableMetadata').checked;
         var podcasts = page.querySelector('#absEnablePodcasts').checked;
+
+        var libIds = [];
+        page.querySelectorAll('.abs-library-checkbox:checked').forEach(function (cb) {
+            libIds.push(cb.value);
+        });
 
         var tokenEntries = [];
         page.querySelectorAll('.abs-user-token').forEach(function (input) {
@@ -563,12 +649,13 @@
         ApiClient.getPluginConfiguration(getPluginId()).then(function (config) {
             config.AbsServerUrl                = url;
             config.AdminApiToken               = token;
-            config.IncludedLibraryIds          = libIds ? libIds.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+            config.IncludedLibraryIds          = libIds;
             config.ProgressSyncIntervalMinutes = interval;
             config.EnableOutboundSync          = outbound;
             config.EnableInboundSync           = inbound;
             config.EnableMetadataProvider      = metadata;
             config.EnablePodcastLibraries      = podcasts;
+            config.TitleMatchConfidenceThreshold = parseFloat(page.querySelector('#absTitleConfidence').value) || 0.85;
             config.UserTokenEntries            = tokenEntries;
 
             return ApiClient.updatePluginConfiguration(getPluginId(), config);

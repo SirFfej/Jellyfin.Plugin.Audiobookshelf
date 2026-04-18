@@ -28,14 +28,23 @@ Audiobookshelf (ABS) manages your audiobook files, metadata, and listening progr
 
 ### Metadata
 - **Cover art** — fetches cover images from your ABS server and uses them as primary images in Jellyfin
-- **Rich book metadata** — title, authors, narrators, series name and sequence number, publisher, genres, tags, description (HTML stripped), publication year
+- **Rich book metadata** — title, authors, narrators, series name and sequence number, publisher, genres, tags, description (HTML stripped)
 - **ASIN / ISBN provider IDs** — stored on the Jellyfin item so future lookups are fast
 - **Fuzzy matching** — when no exact ASIN/ISBN match exists, falls back to file-path and title+author scoring to find the right ABS item
+- **Type-aware matching** — ebook (.epub, .pdf) matches to ABS items with ebook files; audiobook matches to items with audio files
 
 ### Progress Sync
 - **Outbound (real-time)** — whenever you play an audiobook in Jellyfin, your position is pushed to ABS within 10 seconds (debounced to avoid hammering the API)
 - **Inbound (scheduled)** — a Jellyfin scheduled task pulls ABS progress on a configurable interval (default: 10 minutes) and at startup; uses last-write-wins logic based on ABS timestamps
 - **Outbound (on-demand)** — a second scheduled task lets you trigger a bulk push of all Jellyfin positions to ABS from the admin Tasks page; useful after ABS was unreachable or for initial migration
+
+### Tasks
+- **Link Unmatched Items** — finds unlinked Jellyfin items and matches them to ABS using ASIN, ISBN, or fuzzy title+author matching; respects ebook vs audiobook types
+- **Cleanup: Remove Invalid Links** — removes ABS IDs from items that moved outside selected libraries
+- **Cleanup: Repair Broken Links** — detects when ABS items were deleted and re-matches to current library
+- **Cleanup: Validate Link Types** — validates that linked items match types (audiobook↔audiobook, ebook↔ebook) and removes mismatches
+- **Refresh Metadata** — queues metadata refresh for all ABS-linked items
+- **Cache** — ABS library items are cached for 10 minutes to speed up multiple task runs
 
 ### User Mapping
 - **Auto-discovery** — enter your ABS admin token and click "Discover Users" to automatically match Jellyfin users to ABS accounts by username
@@ -134,13 +143,27 @@ The script auto-detects Jellyfin's media volumes, network, and UID/GID — no ma
 
 ## Scheduled Tasks
 
-Two tasks appear under **Dashboard → Scheduled Tasks → Audiobookshelf**:
+All tasks appear under **Dashboard → Scheduled Tasks → Audiobookshelf**:
 
+### Cleanup Tasks (grouped together)
+| Task | Default trigger | What it does |
+|------|----------------|--------------|
+| **Cleanup: Remove Invalid Links** | Manual only | Removes ABS IDs from items outside selected libraries |
+| **Cleanup: Repair Broken Links** | Weekly Sun 3am | Re-matches items whose ABS item was deleted |
+| **Cleanup: Validate Link Types** | Manual only | Validates audiobook↔audiobook, ebook↔ebook matches; removes mismatches |
+
+### Sync Tasks
 | Task | Default trigger | What it does |
 |------|----------------|--------------|
 | **Pull Progress from ABS** | Every 10 min + on startup | Fetches ABS progress for all mapped users; updates Jellyfin positions using last-write-wins |
 | **Push Progress to ABS** | On demand only | Bulk-pushes all Jellyfin playback positions to ABS; useful after ABS was unreachable or for initial migration |
 | **Sync Chapters** | On demand only | Populates Jellyfin chapter markers from ABS chapter data for all matched books; run after a metadata refresh |
+
+### Metadata Tasks
+| Task | Default trigger | What it does |
+|------|----------------|--------------|
+| **Link Unmatched Items** | Manual only | Finds items without ABS links and matches them via ASIN/ISBN/title; respects ebook vs audiobook type |
+| **Refresh Metadata** | Weekly Mon 2am | Queues metadata refresh for all ABS-linked items |
 
 The interval for the pull task is controlled by **Sync interval (minutes)** in the plugin settings.
 

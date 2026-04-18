@@ -21,7 +21,15 @@ Thumbs.db
 # Local context files (not for repo)
 .context/
 CONTEXT.md
+VERSION_TAGS.md
+
+# Claude Code skills
+.claude/
 
 # Build/release output — not source, do not commit
 dist/
 release/
+
+# Test data for API testing (gitignored for privacy)
+test-data/
+test-data/config.json

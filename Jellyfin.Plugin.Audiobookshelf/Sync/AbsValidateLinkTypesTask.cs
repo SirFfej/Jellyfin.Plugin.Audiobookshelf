@@ -34,7 +34,7 @@ public sealed partial class AbsValidateLinkTypesTask : IScheduledTask
         _logger = logger;
     }
 
-    public string Name => "Audiobookshelf: Validate Link Types";
+    public string Name => "Audiobookshelf: Cleanup - Validate Link Types";
 
     public string Key => "AbsValidateLinkTypes";
 
