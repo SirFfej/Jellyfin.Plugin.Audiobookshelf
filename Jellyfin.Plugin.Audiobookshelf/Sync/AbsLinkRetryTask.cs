@@ -137,6 +137,11 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
 
         _logger.LogInformation("ABS link retry: matchingLibraries count = {Count}", matchingLibraries.Count);
 
+        foreach (var lf in matchingLibraries)
+        {
+            _logger.LogInformation("ABS link retry: library '{Name}' has ItemId: {ItemId}", lf.Name, lf.ItemId);
+        }
+
         await report.WriteLineAsync($"Selected libraries ({matchingLibraries.Count}):").ConfigureAwait(false);
         if (matchingLibraries.Count == 0 && includedLibraryIds.Count > 0)
         {
@@ -161,17 +166,36 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
             Recursive = true
         };
 
-        if (selectedGuids.Count > 0)
-        {
-            query.TopParentIds = selectedGuids.ToArray();
-            _logger.LogInformation("ABS link retry: query.TopParentIds set to {Ids}", string.Join(", ", selectedGuids.Select(g => g.ToString())));
-        }
-
         List<BaseItem> allItemsInScope;
         try
         {
-            allItemsInScope = _libraryManager.GetItemList(query).ToList();
-            _logger.LogInformation("ABS link retry: query returned {Count} items", allItemsInScope.Count);
+            allItemsInScope = new List<BaseItem>();
+
+            foreach (var lib in matchingLibraries)
+            {
+                var folder = _libraryManager.GetVirtualFolders()
+                    .FirstOrDefault(f => f.Name == lib.Name);
+
+                if (folder == null)
+                {
+                    _logger.LogWarning("ABS link retry: could not find folder for library {Name}", lib.Name);
+                    continue;
+                }
+
+                var folderId = Guid.Parse(folder.ItemId.ToString());
+
+                var libQuery = new InternalItemsQuery
+                {
+                    Recursive = true,
+                    ParentId = folderId
+                };
+
+                var libItems = _libraryManager.GetItemList(libQuery).ToList();
+                allItemsInScope.AddRange(libItems);
+                _logger.LogInformation("ABS link retry: library '{Name}' (folderId: {FolderId}) returned {Count} items", lib.Name, folderId, libItems.Count);
+            }
+
+            _logger.LogInformation("ABS link retry: total items in selected libraries: {Count}", allItemsInScope.Count);
             await report.WriteLineAsync($"Query returned {allItemsInScope.Count} items in scope").ConfigureAwait(false);
             foreach (var item in allItemsInScope.Take(10))
             {
