@@ -9,12 +9,12 @@
     "owner": "SirFfej",
     "versions": [
       {
-        "changelog": "Fixed library queries: apply ParentId pattern to all 6 tasks. Added ebook/audiobook filtering to prevent mismatches.",
-        "checksum": "640c5dfb85bb2ef8e06b135d20bc1d3c",
-        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.7.0/Jellyfin.Plugin.Audiobookshelf_1.1.7.0.zip",
+        "changelog": "Fix ebook/audiobook filtering: require audio files for non-ebooks, ebook files for ebooks.",
+        "checksum": "4f2a831ec0b981f17ea70741a9add3e3",
+        "sourceUrl": "https://github.com/SirFfej/Jellyfin.Plugin.Audiobookshelf/releases/download/v1.1.7.1/Jellyfin.Plugin.Audiobookshelf_1.1.7.1.zip",
         "targetAbi": "10.11.8.0",
-        "timestamp": "2026-04-18T14:15:00Z",
-        "version": "1.1.7.0"
+        "timestamp": "2026-04-18T14:30:00Z",
+        "version": "1.1.7.1"
       },
       {
         "changelog": "Remove MediaTypes filter to query all items, rely on TopParentIds for scope.",

@@ -40,8 +40,8 @@ public static class ItemMatcher
         bool preferEbook = false)
     {
         // Filter candidates based on ebook vs audiobook preference
-        // preferEbook=true means we want items with EbookFile
-        // preferEbook=false means we want items with AudioFiles (or no ebook)
+        // preferEbook=true → match only items with EbookFile
+        // preferEbook=false → match only items with AudioFiles (exclude items with only ebook)
         var candidates = absItems.Where(i =>
         {
             bool hasEbook = i.Media.EbookFile is not null;
@@ -53,7 +53,7 @@ public static class ItemMatcher
             }
             else
             {
-                return !hasEbook || hasAudio;
+                return hasAudio;
             }
         }).ToList();
 

@@ -292,14 +292,19 @@ public partial class AbsLinkCleanupTask : IScheduledTask
             cancellationToken.ThrowIfCancellationRequested();
             progress.Report(50.0 + ((double)bookIndex / brokenBooks.Count * 50.0));
 
-            // Book doesn't expose author directly on the entity — pass null so
-            // ItemMatcher falls back to title-only scoring (same as metadata provider).
+            string? container = book.Container;
+            bool preferEbook = !string.IsNullOrWhiteSpace(container) &&
+                (container.EndsWith("epub", StringComparison.OrdinalIgnoreCase) ||
+                 container.EndsWith("pdf", StringComparison.OrdinalIgnoreCase));
+
             var newMatch = ItemMatcher.FindBestMatch(
                 asin: null,
                 isbn: null,
                 title: book.Name ?? string.Empty,
                 authorName: null,
-                absItems: allAbsItems);
+                absItems: allAbsItems,
+                confidenceThreshold: 0.85,
+                preferEbook: preferEbook);
 
             if (newMatch is null)
             {
