@@ -1,11 +1,12 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using Jellyfin.Data.Enums;
+using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -102,36 +103,30 @@ public sealed partial class AbsCleanupInvalidLinksTask : IScheduledTask
         await report.WriteLineAsync().ConfigureAwait(false);
 
         var matchingLibraries = _libraryManager.GetVirtualFolders()
-            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
-            .Select(lf => $"{lf.Name} ({lf.ItemId})")
+            .Where(lf => LibraryScope.IsIncluded(lf, includedLibraryIds))
             .ToList();
 
         await report.WriteLineAsync($"Matching libraries: {matchingLibraries.Count}").ConfigureAwait(false);
         foreach (var name in matchingLibraries)
         {
-            await report.WriteLineAsync($"  - {name}").ConfigureAwait(false);
+            await report.WriteLineAsync($"  - {name.Name} ({name.ItemId})").ConfigureAwait(false);
         }
         await report.WriteLineAsync().ConfigureAwait(false);
 
         if (matchingLibraries.Count == 0)
         {
             await report.WriteLineAsync("WARNING: No libraries found matching selected IDs!").ConfigureAwait(false);
-            await report.WriteLineAsync("This means ALL items with ABS IDs will be cleaned up.").ConfigureAwait(false);
+            await report.WriteLineAsync("Skipping cleanup because the configured library scope could not be resolved.").ConfigureAwait(false);
+            await report.FlushAsync(cancellationToken).ConfigureAwait(false);
+            progress.Report(100);
+            return;
         }
 
         var inScopeItems = new List<BaseItem>();
 
         foreach (var lib in matchingLibraries)
         {
-            var folder = _libraryManager.GetVirtualFolders()
-                .FirstOrDefault(f => f.Name == lib);
-
-            if (folder == null)
-            {
-                continue;
-            }
-
-            var folderId = Guid.Parse(folder.ItemId.ToString());
+            var folderId = Guid.Parse(lib.ItemId);
 
             var libQuery = new InternalItemsQuery
             {

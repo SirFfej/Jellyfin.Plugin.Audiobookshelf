@@ -47,7 +47,7 @@ public class AbsImageProvider : IRemoteImageProvider, IHasOrder
     public int Order => -1;
 
     /// <inheritdoc />
-    public bool Supports(BaseItem item) => item is Book;
+    public bool Supports(BaseItem item) => item is Book or AudioBook;
 
     /// <inheritdoc />
     public IEnumerable<ImageType> GetSupportedImages(BaseItem item)

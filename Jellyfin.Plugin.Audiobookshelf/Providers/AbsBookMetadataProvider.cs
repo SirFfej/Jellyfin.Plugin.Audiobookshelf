@@ -1,16 +1,17 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.Audiobookshelf.Api;
-using Jellyfin.Plugin.Audiobookshelf.Api.Models;
-using Jellyfin.Plugin.Audiobookshelf.Helpers;
+using System.Threading;
+using System;
 using Jellyfin.Data.Enums;
+using Jellyfin.Plugin.Audiobookshelf.Api.Models;
+using Jellyfin.Plugin.Audiobookshelf.Api;
+using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Providers;
@@ -25,11 +26,12 @@ namespace Jellyfin.Plugin.Audiobookshelf.Providers;
 /// Only active when <see cref="PluginConfiguration.EnableMetadataProvider"/> is <c>true</c>.
 /// Disable this when using the channel mode exclusively to avoid items appearing twice.
 /// </remarks>
-public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, IHasOrder
+public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, IRemoteMetadataProvider<AudioBook, SongInfo>, IHasOrder
 {
     private static readonly Regex YearRegex = new(@"\b(\d{4})\b", RegexOptions.Compiled);
     private static readonly Regex HtmlStripRegex = new("<[^>]*>", RegexOptions.Compiled);
 
+    private readonly ILibraryManager _libraryManager;
     private readonly AbsApiClientFactory _clientFactory;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AbsBookMetadataProvider> _logger;
@@ -40,8 +42,10 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, 
     public AbsBookMetadataProvider(
         AbsApiClientFactory clientFactory,
         IHttpClientFactory httpClientFactory,
-        ILogger<AbsBookMetadataProvider> logger)
+        ILogger<AbsBookMetadataProvider> logger,
+        ILibraryManager libraryManager)
     {
+        _libraryManager = libraryManager;
         _clientFactory = clientFactory;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
@@ -61,11 +65,18 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, 
     // -------------------------------------------------------------------------
 
     /// <inheritdoc />
-    public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(
-        BookInfo searchInfo,
-        CancellationToken cancellationToken)
+    public Task<IEnumerable<RemoteSearchResult>> GetSearchResults(BookInfo searchInfo, CancellationToken cancellationToken)
+        => GetSearchResultsAsync(searchInfo, preferEbook: true, cancellationToken);
+
+    Task<IEnumerable<RemoteSearchResult>> IRemoteSearchProvider<SongInfo>.GetSearchResults(
+        SongInfo searchInfo, CancellationToken cancellationToken)
+        => GetSearchResultsAsync(ToBookInfo(searchInfo), preferEbook: false, cancellationToken);
+
+    private async Task<IEnumerable<RemoteSearchResult>> GetSearchResultsAsync(
+        BookInfo searchInfo, bool preferEbook, CancellationToken cancellationToken)
     {
-        if (Plugin.Instance?.Configuration.EnableMetadataProvider != true)
+        if (Plugin.Instance?.Configuration.EnableMetadataProvider != true
+            || !LibraryScope.ContainsPath(_libraryManager.GetVirtualFolders(), Plugin.Instance.Configuration.IncludedLibraryIds, searchInfo.Path))
         {
             return [];
         }
@@ -75,7 +86,7 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, 
 
         var results = new List<RemoteSearchResult>();
 
-        foreach (var item in candidates)
+        foreach (var item in candidates.Where(i => preferEbook ? i.Media.HasEbook : i.Media.HasAudio))
         {
             double score = ScoreMatch(searchInfo, item);
             if (score < 0.5)
@@ -102,13 +113,56 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, 
     // -------------------------------------------------------------------------
 
     /// <inheritdoc />
-    public async Task<MetadataResult<Book>> GetMetadata(
-        BookInfo info,
-        CancellationToken cancellationToken)
+    public Task<MetadataResult<Book>> GetMetadata(BookInfo info, CancellationToken cancellationToken)
+        => GetMetadataAsync(info, preferEbook: true, cancellationToken);
+
+    async Task<MetadataResult<AudioBook>> IRemoteMetadataProvider<AudioBook, SongInfo>.GetMetadata(
+        SongInfo info, CancellationToken cancellationToken)
+    {
+        var metadata = await GetMetadataAsync(ToBookInfo(info), preferEbook: false, cancellationToken).ConfigureAwait(false);
+        var result = new MetadataResult<AudioBook>
+        {
+            HasMetadata = metadata.HasMetadata,
+            QueriedById = metadata.QueriedById,
+            ResultLanguage = metadata.ResultLanguage
+        };
+        if (metadata.HasMetadata)
+        {
+            var book = metadata.Item;
+            result.Item = new AudioBook
+            {
+                Name = book.Name,
+                Overview = book.Overview,
+                ProductionYear = book.ProductionYear,
+                Studios = book.Studios,
+                Tags = book.Tags,
+                Genres = book.Genres,
+                ProviderIds = book.ProviderIds
+            };
+            foreach (var person in metadata.People)
+            {
+                result.AddPerson(person);
+            }
+        }
+
+        return result;
+    }
+
+    private static BookInfo ToBookInfo(SongInfo info) => new()
+    {
+        Name = info.Name,
+        Path = info.Path,
+        ProviderIds = info.ProviderIds,
+        MetadataLanguage = info.MetadataLanguage
+    };
+
+    private async Task<MetadataResult<Book>> GetMetadataAsync(
+        BookInfo info, bool preferEbook, CancellationToken cancellationToken)
     {
         var result = new MetadataResult<Book> { HasMetadata = false };
 
-        if (Plugin.Instance?.Configuration.EnableMetadataProvider != true)
+        if (Plugin.Instance?.Configuration.EnableMetadataProvider != true
+            || !LibraryScope.ContainsPath(_libraryManager.GetVirtualFolders(), Plugin.Instance.Configuration.IncludedLibraryIds, info.Path))
         {
             return result;
         }
@@ -141,12 +195,19 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, 
                 info.Name,
                 authorName,
                 candidates,
-                config.TitleMatchConfidenceThreshold);
+                config.TitleMatchConfidenceThreshold,
+                preferEbook);
         }
 
         if (absItem is null)
         {
             _logger.LogDebug("No ABS match found for '{Title}'", info.Name);
+            return result;
+        }
+
+        absItem = await _clientFactory.GetAdminClient().GetItemAsync(absItem.Id, cancellationToken).ConfigureAwait(false);
+        if (absItem is null || !(preferEbook ? absItem.Media.HasEbook : absItem.Media.HasAudio))
+        {
             return result;
         }
 
@@ -234,17 +295,11 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, 
         var libraries = await client.GetLibrariesAsync(ct).ConfigureAwait(false);
         var config = Plugin.Instance!.Configuration;
 
-        IEnumerable<AbsLibrary> included;
-        if (config.IncludedLibraryIds.Count > 0)
-        {
-            included = libraries.Where(l => config.IncludedLibraryIds.Contains(l.Id));
-        }
-        else
-        {
-            included = config.EnablePodcastLibraries
-                ? libraries.Where(l => l.MediaType == "book" || l.MediaType == "podcast")
-                : libraries.Where(l => l.MediaType == "book");
-        }
+        // IncludedLibraryIds contains Jellyfin IDs. ABS library IDs are unrelated;
+        // Jellyfin scope is checked against the lookup path before reaching here.
+        var included = config.EnablePodcastLibraries
+            ? libraries.Where(l => l.MediaType == "book" || l.MediaType == "podcast")
+            : libraries.Where(l => l.MediaType == "book");
 
         var all = new List<AbsLibraryItem>();
         foreach (var lib in included)
@@ -257,7 +312,7 @@ public class AbsBookMetadataProvider : IRemoteMetadataProvider<Book, BookInfo>, 
                 // a dedicated provider not yet implemented. This prevents podcast items from
                 // polluting book matching when a podcast library is included.
                 all.AddRange(response.Results.Where(i => !i.IsMissing && i.MediaType == "book"));
-                if (all.Count >= response.Total || response.Results.Length == 0)
+                if ((page + 1) * 100 >= response.Total || response.Results.Length == 0)
                 {
                     break;
                 }

@@ -1,12 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Audiobookshelf.Api;
+using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -76,28 +77,15 @@ public sealed partial class AbsValidateLinkTypesTask : IScheduledTask
 
         var includedLibraryIds = config.IncludedLibraryIds;
 
-        var selectedGuids = includedLibraryIds
-            .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
-            .Where(g => g != Guid.Empty)
-            .ToList();
-
         var matchingLibraries = _libraryManager.GetVirtualFolders()
-            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .Where(lf => LibraryScope.IsIncluded(lf, includedLibraryIds))
             .ToList();
 
         var linkedItems = new List<BaseItem>();
 
         foreach (var lib in matchingLibraries)
         {
-            var folder = _libraryManager.GetVirtualFolders()
-                .FirstOrDefault(f => f.Name == lib.Name);
-
-            if (folder == null)
-            {
-                continue;
-            }
-
-            var folderId = Guid.Parse(folder.ItemId.ToString());
+            var folderId = Guid.Parse(lib.ItemId);
 
             var libQuery = new InternalItemsQuery
             {
@@ -160,8 +148,8 @@ public sealed partial class AbsValidateLinkTypesTask : IScheduledTask
                 }
                 else
                 {
-                    bool absHasEbook = absItem.Media.EbookFile is not null;
-                    bool absHasAudio = absItem.Media.AudioFiles.Length > 0;
+                    bool absHasEbook = absItem.Media.HasEbook;
+                    bool absHasAudio = absItem.Media.HasAudio;
 
                     if (jellyfinIsEbook && !absHasEbook)
                     {
@@ -179,10 +167,10 @@ public sealed partial class AbsValidateLinkTypesTask : IScheduledTask
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 await report.WriteLineAsync($"  ERROR       : \"{item.Name}\"  [{absId}] — {ex.Message}").ConfigureAwait(false);
-                mismatched.Add((item, absId!, $"Error: {ex.Message}"));
+                // Keep the existing link when ABS cannot be checked.
             }
 
             checkedCount++;

@@ -49,7 +49,8 @@ public sealed partial class LibraryEnrichmentService : IDisposable
             return;
         }
 
-        if (e.Item is not Book book)
+        var book = e.Item;
+        if (book is not (Book or AudioBook))
         {
             return;
         }

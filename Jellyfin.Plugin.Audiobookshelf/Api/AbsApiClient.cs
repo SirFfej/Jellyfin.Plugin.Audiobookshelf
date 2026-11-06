@@ -94,6 +94,8 @@ public class AbsApiClient
 
     /// <summary>
     /// Returns full detail for a single library item. Cached for 5 minutes.
+    /// Only HTTP 404 returns null; other failures propagate so cleanup tasks cannot
+    /// mistake an unavailable ABS server for a deleted item.
     /// </summary>
     public async Task<AbsLibraryItem?> GetItemAsync(string itemId, CancellationToken ct = default)
     {
@@ -101,7 +103,7 @@ public class AbsApiClient
         return await _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return await GetAsync<AbsLibraryItem>($"api/items/{itemId}?expanded=1", ct).ConfigureAwait(false);
+            return await GetAsync<AbsLibraryItem>($"api/items/{itemId}?expanded=1", ct, throwOnError: true).ConfigureAwait(false);
         }).ConfigureAwait(false);
     }
 
@@ -388,7 +390,7 @@ public class AbsApiClient
     // Internal helpers
     // -------------------------------------------------------------------------
 
-    private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct) where T : class
+    private async Task<T?> GetAsync<T>(string relativeUrl, CancellationToken ct, bool throwOnError = false) where T : class
     {
         const int maxRetries = 3;
         Exception? lastException = null;
@@ -416,6 +418,11 @@ public class AbsApiClient
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex, "ABS request error: GET {Url}", relativeUrl);
+                if (throwOnError)
+                {
+                    throw;
+                }
+
                 return null;
             }
         }

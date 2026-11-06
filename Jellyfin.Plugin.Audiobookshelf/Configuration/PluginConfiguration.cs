@@ -57,7 +57,7 @@ public class PluginConfiguration : BasePluginConfiguration
         UserTokenEntries.ToDictionary(e => e.UserId, e => e.Token);
 
     /// <summary>
-    /// Gets or sets the ABS library IDs to expose in Jellyfin.
+    /// Gets or sets the Jellyfin book/music library IDs to sync with Audiobookshelf.
     /// Empty list means all libraries are included.
     /// </summary>
     public List<string> IncludedLibraryIds { get; set; } = new();

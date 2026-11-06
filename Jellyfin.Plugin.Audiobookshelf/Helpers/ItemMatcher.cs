@@ -39,23 +39,12 @@ public static class ItemMatcher
         double confidenceThreshold = 0.85,
         bool preferEbook = false)
     {
-        // Filter candidates based on ebook vs audiobook preference
-        // preferEbook=true → match only items with EbookFile
-        // preferEbook=false → match only items with AudioFiles (exclude items with only ebook)
-        var candidates = absItems.Where(i =>
-        {
-            bool hasEbook = i.Media.EbookFile is not null;
-            bool hasAudio = i.Media.AudioFiles.Length > 0;
-
-            if (preferEbook)
-            {
-                return hasEbook;
-            }
-            else
-            {
-                return hasAudio;
-            }
-        }).ToList();
+        // Library-list responses can be compact even when expanded=1 is requested.
+        // Check counts/format as well as the full file objects before matching IDs.
+        var candidates = absItems
+            .Where(i => !i.IsMissing && i.MediaType == "book")
+            .Where(i => preferEbook ? i.Media.HasEbook : i.Media.HasAudio)
+            .ToList();
 
         // Priority 1: ASIN exact match
         if (!string.IsNullOrWhiteSpace(asin))
@@ -99,8 +88,8 @@ public static class ItemMatcher
 
         foreach (var item in candidates.Where(i => !i.IsMissing))
         {
-            string absRawTitle    = item.Media.Metadata.Title;
-            string absNormTitle   = NormaliseTitle(absRawTitle);
+            string absRawTitle = item.Media.Metadata.Title;
+            string absNormTitle = NormaliseTitle(absRawTitle);
             string absStrippedTitle = NormaliseTitle(StripSeriesAnnotation(absRawTitle));
 
             // Score against both the raw normalised title and the stripped title; take best
