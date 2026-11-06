@@ -1,13 +1,14 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Common.Configuration;
+using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
@@ -58,7 +59,7 @@ public partial class AbsLinkCleanupTask : IScheduledTask
     }
 
     /// <inheritdoc />
-public string Name => "Audiobookshelf: Cleanup - Repair Broken Links";
+    public string Name => "Audiobookshelf: Cleanup - Repair Broken Links";
 
     public string Key => "AbsLinkCleanup";
 
@@ -111,13 +112,8 @@ public string Name => "Audiobookshelf: Cleanup - Repair Broken Links";
         var config = Plugin.Instance!.Configuration;
         var includedLibraryIds = config.IncludedLibraryIds;
 
-        var selectedGuids = includedLibraryIds
-            .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
-            .Where(g => g != Guid.Empty)
-            .ToList();
-
         var matchingLibraries = _libraryManager.GetVirtualFolders()
-            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .Where(lf => LibraryScope.IsIncluded(lf, includedLibraryIds))
             .ToList();
 
         await report.WriteLineAsync($"Selected libraries ({matchingLibraries.Count}):").ConfigureAwait(false);
@@ -139,20 +135,11 @@ public string Name => "Audiobookshelf: Cleanup - Repair Broken Links";
         }
         await report.WriteLineAsync().ConfigureAwait(false);
 
-        var linkedBooks = new List<Book>();
+        var linkedBooks = new List<BaseItem>();
 
         foreach (var lib in matchingLibraries)
         {
-            var folder = _libraryManager.GetVirtualFolders()
-                .FirstOrDefault(f => f.Name == lib.Name);
-
-            if (folder == null)
-            {
-                await report.WriteLineAsync($"  WARNING: Could not find folder for library {lib.Name}").ConfigureAwait(false);
-                continue;
-            }
-
-            var folderId = Guid.Parse(folder.ItemId.ToString());
+            var folderId = Guid.Parse(lib.ItemId);
 
             var libQuery = new InternalItemsQuery
             {
@@ -162,7 +149,7 @@ public string Name => "Audiobookshelf: Cleanup - Repair Broken Links";
             };
 
             var libBooks = _libraryManager.GetItemList(libQuery)
-                .OfType<Book>()
+                .Where(item => item is Book or Audio)
                 .ToList();
             linkedBooks.AddRange(libBooks);
             await report.WriteLineAsync($"  Library '{lib.Name}' (folderId: {folderId}) returned {libBooks.Count} books").ConfigureAwait(false);
@@ -197,7 +184,7 @@ public string Name => "Audiobookshelf: Cleanup - Repair Broken Links";
         var adminClient = _clientFactory.GetAdminClient();
 
         // ── Step 2: identify broken links ─────────────────────────────────────
-        var brokenBooks = new List<(Book Book, string OldAbsId)>();
+        var brokenBooks = new List<(BaseItem Book, string OldAbsId)>();
         int checkedCount = 0;
 
         await report.WriteLineAsync("--- Checking existing links ---").ConfigureAwait(false);

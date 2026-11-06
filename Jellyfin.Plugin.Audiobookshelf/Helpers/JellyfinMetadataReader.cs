@@ -61,7 +61,9 @@ public class JellyfinMetadataReader
             return new JellyfinItemMetadata
             {
                 Title = metadata.Title ?? item.Name,
-                Author = metadata.Author ?? ExtractAuthorFromPath(metadataDir),
+                Author = !string.IsNullOrWhiteSpace(metadata.Author)
+                    ? metadata.Author
+                    : metadata.Authors is { Length: > 0 } ? string.Join(", ", metadata.Authors) : null,
                 Asin = metadata.Asin,
                 Isbn = metadata.Isbn,
                 Narrator = metadata.Narrator ?? metadata.NarratedBy
@@ -72,39 +74,6 @@ public class JellyfinMetadataReader
             _logger.LogDebug(ex, "Failed to read metadata.json for item {ItemName}", item.Name);
             return null;
         }
-    }
-
-    private static string? ExtractAuthorFromPath(string path)
-    {
-        var parts = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        for (int i = parts.Length - 1; i >= 0; i--)
-        {
-            var part = parts[i].Trim();
-            if (string.IsNullOrWhiteSpace(part))
-            {
-                continue;
-            }
-
-            if (part.Equals("Audiobooks", StringComparison.OrdinalIgnoreCase) ||
-                part.Equals("Books", StringComparison.OrdinalIgnoreCase) ||
-                part.Equals("Music", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (part.Contains('[') || part.Contains("m4b", StringComparison.OrdinalIgnoreCase) ||
-                part.EndsWith(".m4b", StringComparison.OrdinalIgnoreCase) ||
-                part.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) ||
-                part.EndsWith(".epub", StringComparison.OrdinalIgnoreCase) ||
-                part.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            return part;
-        }
-
-        return null;
     }
 }
 
@@ -124,6 +93,9 @@ internal class JellyfinMetadataJson
 
     [JsonPropertyName("author")]
     public string? Author { get; set; }
+
+    [JsonPropertyName("authors")]
+    public string[]? Authors { get; set; }
 
     [JsonPropertyName("authorSort")]
     public string? AuthorSort { get; set; }

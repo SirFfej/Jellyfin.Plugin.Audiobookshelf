@@ -1,8 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Controller.Entities;
@@ -168,28 +168,15 @@ public partial class OutboundSyncTask : IScheduledTask
         var config = Plugin.Instance!.Configuration;
         var includedLibraryIds = config.IncludedLibraryIds;
 
-        var selectedGuids = includedLibraryIds
-            .Select(id => Guid.TryParse(id, out var guid) ? guid : Guid.Empty)
-            .Where(g => g != Guid.Empty)
-            .ToList();
-
         var matchingLibraries = _libraryManager.GetVirtualFolders()
-            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .Where(lf => LibraryScope.IsIncluded(lf, includedLibraryIds))
             .ToList();
 
         var absItems = new List<BaseItem>();
 
         foreach (var lib in matchingLibraries)
         {
-            var folder = _libraryManager.GetVirtualFolders()
-                .FirstOrDefault(f => f.Name == lib.Name);
-
-            if (folder == null)
-            {
-                continue;
-            }
-
-            var folderId = Guid.Parse(folder.ItemId.ToString());
+            var folderId = Guid.Parse(lib.ItemId);
 
             var libQuery = new InternalItemsQuery
             {

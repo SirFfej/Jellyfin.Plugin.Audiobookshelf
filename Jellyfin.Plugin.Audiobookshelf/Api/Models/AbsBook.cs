@@ -27,6 +27,26 @@ public class AbsBook
     [JsonPropertyName("audioFiles")]
     public AbsAudioFile[] AudioFiles { get; set; } = [];
 
+    /// <summary>Gets or sets the audio-file count returned by compact library records.</summary>
+    [JsonPropertyName("numAudioFiles")]
+    public int NumAudioFiles { get; set; }
+
+    /// <summary>Gets or sets the playable-track count returned by compact library records.</summary>
+    [JsonPropertyName("numTracks")]
+    public int NumTracks { get; set; }
+
+    /// <summary>Gets or sets the ebook format returned by compact library records.</summary>
+    [JsonPropertyName("ebookFormat")]
+    public string? EbookFormat { get; set; }
+
+    /// <summary>Gets a value indicating whether a compact or full record contains audio.</summary>
+    [JsonIgnore]
+    public bool HasAudio => AudioFiles.Length > 0 || NumAudioFiles > 0 || NumTracks > 0;
+
+    /// <summary>Gets a value indicating whether a compact or full record contains an ebook.</summary>
+    [JsonIgnore]
+    public bool HasEbook => EbookFile is not null || !string.IsNullOrWhiteSpace(EbookFormat);
+
     /// <summary>Gets or sets the chapter list (full book timeline, all files merged).</summary>
     [JsonPropertyName("chapters")]
     public AbsChapter[] Chapters { get; set; } = [];

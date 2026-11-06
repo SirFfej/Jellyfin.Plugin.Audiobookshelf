@@ -1,16 +1,16 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Audiobookshelf.Api;
 using Jellyfin.Plugin.Audiobookshelf.Helpers;
 using MediaBrowser.Common.Configuration;
-using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
@@ -132,7 +132,7 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
         _logger.LogInformation("ABS link retry: parsed selectedGuids = {Guids}", string.Join(", ", selectedGuids.Select(g => g.ToString())));
 
         var matchingLibraries = _libraryManager.GetVirtualFolders()
-            .Where(lf => selectedGuids.Contains(Guid.Parse(lf.ItemId.ToString())))
+            .Where(lf => LibraryScope.IsIncluded(lf, includedLibraryIds))
             .ToList();
 
         _logger.LogInformation("ABS link retry: matchingLibraries count = {Count}", matchingLibraries.Count);
@@ -173,16 +173,7 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
 
             foreach (var lib in matchingLibraries)
             {
-                var folder = _libraryManager.GetVirtualFolders()
-                    .FirstOrDefault(f => f.Name == lib.Name);
-
-                if (folder == null)
-                {
-                    _logger.LogWarning("ABS link retry: could not find folder for library {Name}", lib.Name);
-                    continue;
-                }
-
-                var folderId = Guid.Parse(folder.ItemId.ToString());
+                var folderId = Guid.Parse(lib.ItemId);
 
                 var libQuery = new InternalItemsQuery
                 {
@@ -190,7 +181,9 @@ public sealed partial class AbsLinkRetryTask : IScheduledTask
                     ParentId = folderId
                 };
 
-                var libItems = _libraryManager.GetItemList(libQuery).ToList();
+                var libItems = _libraryManager.GetItemList(libQuery)
+                    .Where(item => item is Book or Audio)
+                    .ToList();
                 allItemsInScope.AddRange(libItems);
                 _logger.LogInformation("ABS link retry: library '{Name}' (folderId: {FolderId}) returned {Count} items", lib.Name, folderId, libItems.Count);
             }
